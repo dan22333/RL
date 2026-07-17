@@ -1,0 +1,18 @@
+# Python virtual environment (machine-specific, ~840 MB — never commit)
+.venv/
+venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.ipynb_checkpoints/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings (tooling config, not project code)
+.claude/

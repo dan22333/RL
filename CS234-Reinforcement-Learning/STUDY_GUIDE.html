@@ -1,0 +1,656 @@
+<title>CS234 Study Guide — Assignments 1–3</title>
+<style>
+  :root{
+    --ground:#eef1f4; --surface:#ffffff; --surface-2:#f4f6f8;
+    --ink:#16232c; --ink-soft:#42525d; --ink-faint:#6b7a84;
+    --line:#dde3e8; --line-strong:#c6cfd6;
+    --accent:#0e6e73; --accent-soft:#0e6e7315; --accent-line:#0e6e7340;
+    --proof:#4b4fb0; --proof-soft:#4b4fb012;
+    --intuit:#1f7a4d; --intuit-soft:#1f7a4d12;
+    --bug:#b4560b; --bug-soft:#b4560b12;
+    --code-bg:#f5f7f8; --code-ink:#1d2a33; --kw:#0e6e73; --num:#b4560b; --com:#8a97a0; --str:#1f7a4d;
+    --maxw:50rem;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#0d1417; --surface:#131e23; --surface-2:#0f181c;
+      --ink:#e4ecef; --ink-soft:#a7b6bd; --ink-faint:#7a8a91;
+      --line:#22323a; --line-strong:#31454e;
+      --accent:#48bcc2; --accent-soft:#48bcc21a; --accent-line:#48bcc244;
+      --proof:#9a9ef0; --proof-soft:#9a9ef015;
+      --intuit:#5fc98d; --intuit-soft:#5fc98d15;
+      --bug:#f0a35a; --bug-soft:#f0a35a15;
+      --code-bg:#0f181c; --code-ink:#cdd9df; --kw:#48bcc2; --num:#f0a35a; --com:#647680; --str:#5fc98d;
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#eef1f4; --surface:#ffffff; --surface-2:#f4f6f8;
+    --ink:#16232c; --ink-soft:#42525d; --ink-faint:#6b7a84;
+    --line:#dde3e8; --line-strong:#c6cfd6;
+    --accent:#0e6e73; --accent-soft:#0e6e7315; --accent-line:#0e6e7340;
+    --proof:#4b4fb0; --proof-soft:#4b4fb012; --intuit:#1f7a4d; --intuit-soft:#1f7a4d12;
+    --bug:#b4560b; --bug-soft:#b4560b12;
+    --code-bg:#f5f7f8; --code-ink:#1d2a33; --kw:#0e6e73; --num:#b4560b; --com:#8a97a0; --str:#1f7a4d;
+  }
+  :root[data-theme="dark"]{
+    --ground:#0d1417; --surface:#131e23; --surface-2:#0f181c;
+    --ink:#e4ecef; --ink-soft:#a7b6bd; --ink-faint:#7a8a91;
+    --line:#22323a; --line-strong:#31454e;
+    --accent:#48bcc2; --accent-soft:#48bcc21a; --accent-line:#48bcc244;
+    --proof:#9a9ef0; --proof-soft:#9a9ef015; --intuit:#5fc98d; --intuit-soft:#5fc98d15;
+    --bug:#f0a35a; --bug-soft:#f0a35a15;
+    --code-bg:#0f181c; --code-ink:#cdd9df; --kw:#48bcc2; --num:#f0a35a; --com:#647680; --str:#5fc98d;
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Charter,Georgia,serif;
+    font-size:1.02rem; line-height:1.66; -webkit-font-smoothing:antialiased;
+  }
+  .sans{font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  code,pre,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+  /* ---- top bar ---- */
+  header.bar{
+    position:sticky; top:0; z-index:20; background:color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+  }
+  .bar-inner{max-width:var(--maxw); margin:0 auto; padding:.7rem 1.3rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap}
+  .bar-title{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:700; letter-spacing:-.01em; font-size:.95rem; margin-right:auto}
+  .bar-title b{color:var(--accent)}
+  nav.jump{display:flex; gap:.35rem; flex-wrap:wrap}
+  nav.jump a{
+    font-family:ui-sans-serif,system-ui,sans-serif; font-size:.78rem; text-decoration:none;
+    color:var(--ink-soft); padding:.22rem .55rem; border:1px solid var(--line); border-radius:999px;
+  }
+  nav.jump a:hover{color:var(--accent); border-color:var(--accent-line); background:var(--accent-soft)}
+
+  main{max-width:var(--maxw); margin:0 auto; padding:0 1.3rem 6rem}
+
+  /* ---- hero ---- */
+  .hero{padding:3.2rem 0 1.2rem; border-bottom:1px solid var(--line); margin-bottom:2.2rem}
+  .eyebrow{font-family:ui-sans-serif,system-ui,sans-serif; text-transform:uppercase; letter-spacing:.16em; font-size:.7rem; color:var(--accent); font-weight:700}
+  h1{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:800; letter-spacing:-.025em; font-size:clamp(1.9rem,5vw,2.9rem); line-height:1.05; margin:.5rem 0 .4rem; text-wrap:balance}
+  .lede{color:var(--ink-soft); font-size:1.08rem; max-width:42rem}
+  .hero ul{color:var(--ink-soft); font-size:.96rem; padding-left:1.1rem}
+
+  /* ---- section headings ---- */
+  section.asg{padding-top:2.4rem}
+  .asg-head{display:flex; align-items:baseline; gap:.9rem; border-bottom:2px solid var(--accent-line); padding-bottom:.5rem; margin-bottom:.4rem}
+  .asg-num{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:800; font-size:1.5rem; color:var(--accent); letter-spacing:-.02em}
+  .asg-head h2{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:800; letter-spacing:-.02em; font-size:1.5rem; margin:0}
+  .asg-sub{color:var(--ink-faint); font-size:.9rem; font-family:ui-sans-serif,system-ui,sans-serif; margin:.1rem 0 1.6rem}
+
+  h3.prob{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:700; font-size:1.15rem; letter-spacing:-.01em; margin:2rem 0 .3rem; color:var(--ink)}
+  h3.prob .pts{font-weight:500; font-size:.8rem; color:var(--ink-faint)}
+  h4.part{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:700; font-size:.98rem; margin:1.5rem 0 .3rem; color:var(--accent)}
+  h4.part .q{color:var(--ink-soft); font-weight:500}
+
+  p{margin:.6rem 0}
+  .q-restate{color:var(--ink-soft); font-style:italic; border-left:2px solid var(--line-strong); padding-left:.85rem; margin:.5rem 0 .8rem}
+
+  /* ---- callouts ---- */
+  .call{border:1px solid var(--line); border-left-width:3px; border-radius:8px; padding:.85rem 1rem; margin:1rem 0; background:var(--surface); font-size:.98rem}
+  .call .lab{font-family:ui-sans-serif,system-ui,sans-serif; text-transform:uppercase; letter-spacing:.1em; font-size:.68rem; font-weight:700; display:block; margin-bottom:.35rem}
+  .call.concept{border-left-color:var(--accent); background:var(--accent-soft)} .call.concept .lab{color:var(--accent)}
+  .call.proof{border-left-color:var(--proof); background:var(--proof-soft)} .call.proof .lab{color:var(--proof)}
+  .call.intuit{border-left-color:var(--intuit); background:var(--intuit-soft)} .call.intuit .lab{color:var(--intuit)}
+  .call.bug{border-left-color:var(--bug); background:var(--bug-soft)} .call.bug .lab{color:var(--bug)}
+  .call .qed{float:right; color:var(--ink-faint)}
+
+  /* ---- math ---- */
+  .eq{overflow-x:auto; background:var(--surface-2); border:1px solid var(--line); border-radius:8px;
+      padding:.7rem 1rem; margin:.9rem 0; text-align:center; font-size:1.05rem}
+  .eq .mono, .eq{font-family:"Iowan Old Style",Palatino,Georgia,serif}
+  var,.v{font-style:italic; font-family:"Iowan Old Style",Palatino,Georgia,serif}
+  .frac{display:inline-flex; flex-direction:column; vertical-align:middle; text-align:center; margin:0 .12em}
+  .frac>span{padding:0 .4em; line-height:1.25}
+  .frac>span:first-child{border-bottom:1.4px solid currentColor}
+  .tag{font-family:ui-sans-serif,system-ui,sans-serif; color:var(--ink-faint); font-size:.85rem; float:right}
+
+  /* ---- code ---- */
+  pre.code{background:var(--code-bg); border:1px solid var(--line); border-radius:8px; padding:.85rem 1rem;
+    overflow-x:auto; font-size:.83rem; line-height:1.5; color:var(--code-ink); margin:.9rem 0}
+  pre.code .kw{color:var(--kw)} pre.code .num{color:var(--num)} pre.code .com{color:var(--com); font-style:italic} pre.code .str{color:var(--str)}
+  code.inl{background:var(--code-bg); border:1px solid var(--line); border-radius:5px; padding:.05em .38em; font-size:.85em; color:var(--code-ink)}
+  .file{font-family:ui-sans-serif,system-ui,sans-serif; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin:1.1rem 0 -.4rem; font-weight:700}
+
+  /* ---- tables ---- */
+  .tbl-wrap{overflow-x:auto; margin:1rem 0}
+  table{border-collapse:collapse; width:100%; font-size:.92rem; font-family:ui-sans-serif,system-ui,sans-serif}
+  th,td{border:1px solid var(--line); padding:.5rem .7rem; text-align:left; vertical-align:top}
+  th{background:var(--surface-2); font-weight:700; font-size:.82rem}
+  td.n{font-variant-numeric:tabular-nums; text-align:right}
+
+  hr.soft{border:none; border-top:1px solid var(--line); margin:2rem 0}
+  .foot{color:var(--ink-faint); font-size:.85rem; font-family:ui-sans-serif,system-ui,sans-serif; text-align:center; padding-top:2rem; border-top:1px solid var(--line); margin-top:3rem}
+  a{color:var(--accent)}
+  strong{color:var(--ink)}
+  ::selection{background:var(--accent-soft)}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+</style>
+
+<header class="bar">
+  <div class="bar-inner">
+    <span class="bar-title">CS234 · <b>RL Study Guide</b></span>
+    <nav class="jump" aria-label="Jump to assignment">
+      <a href="#a1">A1 · MDPs</a>
+      <a href="#a2">A2 · Policy Gradients</a>
+      <a href="#a3">A3 · RLHF &amp; DPO</a>
+      <a href="#issues">Code issues</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <span class="eyebrow">Stanford CS234 · Spring 2024 · Reinforcement Learning</span>
+    <h1>A complete walkthrough of Assignments 1–3</h1>
+    <p class="lede">Every question — theory and coding — restated, answered with full proofs and intuition, plus a line-by-line read of the solution code and the bugs hiding in it.</p>
+    <p style="color:var(--ink-soft); font-size:.95rem">How to read this: <span style="color:var(--accent)">■</span> teal boxes refresh a concept, <span style="color:var(--proof)">■</span> indigo boxes are proofs, <span style="color:var(--intuit)">■</span> green boxes are intuition, and <span style="color:var(--bug)">■</span> amber boxes flag a bug in the committed code with a fix. The written/theory answers are <em>not</em> in the repo — they're worked out here from scratch.</p>
+  </div>
+
+  <!-- =========================== A1 =========================== -->
+  <section class="asg" id="a1">
+    <div class="asg-head"><span class="asg-num">A1</span><h2>MDPs: horizon, reward hacking, Bellman bounds, RiverSwim</h2></div>
+    <p class="asg-sub">Value iteration &amp; policy iteration · the theory of the Bellman operator and performance guarantees.</p>
+
+    <!-- Q1 -->
+    <h3 class="prob">Q1 · Effect of the effective horizon <span class="pts">8 pts</span></h3>
+    <p>An inventory MDP: stock <var>s</var> ∈ {0,…,10}. <strong>Sell</strong> gives +1 and <var>s</var>→<var>s</var>−1 (for <var>s</var>&gt;0). <strong>Buy</strong> gives 0 and <var>s</var>→<var>s</var>+1, <em>except</em> the transition 9→10 gives <strong>+100</strong>, and <var>s</var>=10 is terminal. Start at <var>s</var>=3.</p>
+
+    <div class="call intuit"><span class="lab">Intuition — the whole problem in one line</span>
+    There are only two ways to earn reward: sell your way down (+1 each, at most +3 from <var>s</var>=3 before you hit 0), or buy your way up to the +100 jackpot at state 10 (which needs 7 buys minimum). Everything below is bookkeeping on that trade-off.</div>
+
+    <h4 class="part">(a) <span class="q">Can some horizon <var>H</var> make the optimal policy take <em>both</em> buy and sell?</span></h4>
+    <p><strong>Yes.</strong> This is the counter-intuitive part. To reach the jackpot you need net +7 in position. But if you have <em>extra</em> horizon to spare, you can first sell (bank a +1) and then buy back — each such detour costs 2 steps and nets an extra +1, and it's worth it as long as you still have enough steps left to reach state 10.</p>
+    <p>Formally, sell <var>k</var> times (<var>k</var>≤3, staying ≥0), then buy up to 10. That path uses <span class="frac"><span>&nbsp;</span></span> <var>k</var> + (7+<var>k</var>) = 7+2<var>k</var> steps and earns <strong>100 + <var>k</var></strong>. So the optimum is to take the largest <var>k</var> with 7+2<var>k</var> ≤ <var>H</var> and <var>k</var>≤3.</p>
+    <div class="eq">for <var>H</var> = 9: &nbsp; sell once (3→2, +1), then buy 8× (2→10, +100) &nbsp;=&nbsp; <strong>+101</strong> &gt; 100</div>
+    <p>So <var>H</var>=9 (and 11, 13) yields an optimal policy that sells <em>and</em> buys. For any <var>H</var>≥9 with slack, the optimum mixes both actions.</p>
+
+    <h4 class="part">(b) <span class="q">For what <var>H</var> does the optimum reach a fully stocked inventory (<var>s</var>=10)?</span></h4>
+    <p><strong><var>H</var> ≥ 7.</strong> Reaching 10 requires 7 buys minimum, so it's impossible for <var>H</var>&lt;7. For any <var>H</var>≥7, the buy-to-10 path earns ≥100, which dominates the best sell-only payoff (+3). So the optimal policy fully stocks for exactly the range <var>H</var> ≥ 7.</p>
+
+    <h4 class="part">(c) <span class="q">Infinite horizon, γ = 0. Optimal action at <var>s</var>=3? at <var>s</var>=9?</span></h4>
+    <p>γ=0 means <em>only the immediate reward counts</em> — the agent is fully myopic.</p>
+    <ul>
+      <li><strong><var>s</var>=3:</strong> sell → +1 now, buy → 0 now ⟹ <strong>sell</strong>.</li>
+      <li><strong><var>s</var>=9:</strong> buy → +100 now (the 9→10 transition), sell → +1 now ⟹ <strong>buy</strong>.</li>
+    </ul>
+
+    <h4 class="part">(d) <span class="q">Can a fixed γ ∈ [0,1) make the optimum starting from <var>s</var>=3 never fully stock?</span></h4>
+    <p><strong>Yes.</strong> The jackpot is collected only after 7 buys, so its discounted value from <var>s</var>=3 is ≈ <var>γ</var><sup>6</sup>·100, while selling banks 1 + γ + γ² immediately. For small enough γ the near, certain +1 beats the far, heavily-discounted +100, so the greedy policy sells forever and never reaches 10. The extreme case γ=0 (part c) already shows it: the agent sells every step and never buys up. So such a γ exists.</p>
+    <div class="call concept"><span class="lab">Concept refresher — the "effective horizon"</span>
+    Discounting by γ behaves like a soft horizon of roughly <span class="frac"><span>1</span><span>1−γ</span></span> steps. A distant reward <var>R</var> that is <var>d</var> steps away is worth only γ<sup><var>d</var></sup><var>R</var> today. Both the hard horizon <var>H</var> and the discount γ change <em>how far the agent is willing to look</em>, which is why the same reward + dynamics can produce completely different optimal policies.</div>
+
+    <!-- Q2 -->
+    <h3 class="prob">Q2 · Reward hacking <span class="pts">5 pts</span></h3>
+    <p>Autonomous-car merging. True goal: minimize mean commute. Proxy reward: maximize mean velocity of all cars. One AI car (red), many human cars (grey).</p>
+    <h4 class="part">(a) <span class="q">Why is it optimal for the AI car not to merge?</span></h4>
+    <p>Merging onto a busy highway forces the many human cars to brake and bunch up — a slowdown wave that lowers the velocity of <em>lots</em> of cars. Keeping the single AI car off the road lets the human traffic flow at high speed. Because the proxy averages velocity over <em>all</em> cars, sacrificing one car's contribution to keep many cars fast yields a <em>higher mean velocity</em> than merging. So under the proxy, "park and never merge" is optimal — even though the car accomplishes nothing.</p>
+    <h4 class="part">(b) <span class="q">Alternate rewards that are still easy to optimize but don't produce the park-forever policy.</span></h4>
+    <p>The failure is that the proxy ignores whether the AI car <em>completes its own trip</em>. Fixes that reintroduce that term while staying tractable: (1) reward the AI car for its own progress toward its destination, e.g. <var>r</var> = distance-to-goal reduced this step, so parking earns nothing; (2) optimize <strong>throughput</strong> — number of cars reaching their destinations per unit time — which requires the AI to actually travel; (3) penalize each car's <em>total travel time</em> (a proxy for commute) rather than instantaneous velocity, so an idle car accrues cost. Any of these keeps the "keep traffic flowing" signal but makes never-merging strictly suboptimal.</p>
+
+    <!-- Q3 -->
+    <h3 class="prob">Q3 · Bellman residuals &amp; performance bounds <span class="pts">30 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — the two Bellman operators</span>
+    For a value vector <var>V</var> ∈ ℝ<sup>|S|</sup>:
+    <div class="eq">(<var>BV</var>)(<var>s</var>) = max<sub><var>a</var></sub> [ <var>r</var>(<var>s</var>,<var>a</var>) + γ Σ<sub><var>s'</var></sub> <var>p</var>(<var>s'</var>|<var>s</var>,<var>a</var>) <var>V</var>(<var>s'</var>) ] &nbsp;&nbsp;(optimality operator, fixed point <var>V</var><sup>∗</sup>)</div>
+    <div class="eq">(<var>B<sup>π</sup>V</var>)(<var>s</var>) = <var>r</var>(<var>s</var>,π(<var>s</var>)) + γ Σ<sub><var>s'</var></sub> <var>p</var>(<var>s'</var>|<var>s</var>,π(<var>s</var>)) <var>V</var>(<var>s'</var>) &nbsp;&nbsp;(policy operator, fixed point <var>V<sup>π</sup></var>)</div>
+    Both are γ-contractions in the sup-norm ‖<var>v</var>‖ = max<sub><var>s</var></sub>|<var>v</var>(<var>s</var>)|. Key distinction: <var>V</var> is <em>any</em> vector; <var>V<sup>π</sup></em> is a vector actually achievable by a policy.</div>
+
+    <h4 class="part">(a) <span class="q">Show ‖<var>B<sup>π</sup>V</var> − <var>B<sup>π</sup>V′</var>‖ ≤ γ‖<var>V</var> − <var>V′</var>‖.</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    The reward terms cancel, leaving for every <var>s</var>:
+    <div class="eq">(<var>B<sup>π</sup>V</var>)(<var>s</var>) − (<var>B<sup>π</sup>V′</var>)(<var>s</var>) = γ Σ<sub><var>s'</var></sub> <var>p</var>(<var>s'</var>|<var>s</var>,π(<var>s</var>)) [<var>V</var>(<var>s'</var>) − <var>V′</var>(<var>s'</var>)]</div>
+    Take absolute value and push it inside the sum (triangle inequality), then bound each difference by the max:
+    <div class="eq">|·| ≤ γ Σ<sub><var>s'</var></sub> <var>p</var>(<var>s'</var>|<var>s</var>,π(<var>s</var>)) ‖<var>V</var>−<var>V′</var>‖ = γ‖<var>V</var>−<var>V′</var>‖</div>
+    because the transition probabilities sum to 1. This holds for every <var>s</var>, so taking the max over <var>s</var> on the left gives ‖<var>B<sup>π</sup>V</var> − <var>B<sup>π</sup>V′</var>‖ ≤ γ‖<var>V</var>−<var>V′</var>‖.</div>
+
+    <h4 class="part">(b) <span class="q">Prove the fixed point of <var>B<sup>π</sup></var> is unique.</span></h4>
+    <div class="call proof"><span class="lab">Proof (by contradiction)</span><span class="qed">∎</span>
+    Suppose <var>V</var><sub>1</sub> and <var>V</var><sub>2</sub> are both fixed points with <var>V</var><sub>1</sub> ≠ <var>V</var><sub>2</sub>, so ‖<var>V</var><sub>1</sub>−<var>V</var><sub>2</sub>‖ &gt; 0. Since each equals its own backup, part (a) gives
+    <div class="eq">‖<var>V</var><sub>1</sub>−<var>V</var><sub>2</sub>‖ = ‖<var>B<sup>π</sup>V</var><sub>1</sub> − <var>B<sup>π</sup>V</var><sub>2</sub>‖ ≤ γ‖<var>V</var><sub>1</sub>−<var>V</var><sub>2</sub>‖.</div>
+    Dividing by the positive quantity ‖<var>V</var><sub>1</sub>−<var>V</var><sub>2</sub>‖ yields 1 ≤ γ, contradicting γ &lt; 1. Hence <var>V</var><sub>1</sub> = <var>V</var><sub>2</sub>.</div>
+
+    <h4 class="part">(c) <span class="q">If <var>V</var> ≤ <var>V′</var> elementwise, show <var>B<sup>π</sup>V</var> ≤ <var>B<sup>π</sup>V′</var> (monotonicity).</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    <div class="eq">(<var>B<sup>π</sup>V′</var>)(<var>s</var>) − (<var>B<sup>π</sup>V</var>)(<var>s</var>) = γ Σ<sub><var>s'</var></sub> <var>p</var>(<var>s'</var>|<var>s</var>,π(<var>s</var>)) [<var>V′</var>(<var>s'</var>) − <var>V</var>(<var>s'</var>)] ≥ 0,</div>
+    since every bracket is ≥ 0 and every probability is ≥ 0. So <var>B<sup>π</sup>V</var>(<var>s</var>) ≤ <var>B<sup>π</sup>V′</var>(<var>s</var>) for all <var>s</var>. (The same argument works for the optimality operator <var>B</var>, because the max of order-preserving maps is order-preserving.)</div>
+
+    <h4 class="part">(d) <span class="q">For what <var>V</var> is the Bellman error ‖<var>BV</var> − <var>V</var>‖ = 0? Why?</span></h4>
+    <p>Exactly <strong><var>V</var> = <var>V</var><sup>∗</sup></strong>, the optimal value function. ‖<var>BV</var>−<var>V</var>‖ = 0 ⟺ <var>BV</var> = <var>V</var> ⟺ <var>V</var> is a fixed point of <var>B</var>. Since <var>B</var> is a contraction it has a <em>unique</em> fixed point, and that fixed point is <var>V</var><sup>∗</sup> by definition. So only the optimal value function has zero Bellman error.</p>
+
+    <h4 class="part">(e) <span class="q">Prove ‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ ‖<var>V</var>−<var>B<sup>π</sup>V</var>‖ / (1−γ) &nbsp;and&nbsp; ‖<var>V</var>−<var>V</var><sup>∗</sup>‖ ≤ ‖<var>V</var>−<var>BV</var>‖ / (1−γ).</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    Insert the "zero term" −<var>B<sup>π</sup>V</var> + <var>B<sup>π</sup>V</var> and use the triangle inequality. Since <var>V<sup>π</sup></var> = <var>B<sup>π</sup>V<sup>π</sup></var>:
+    <div class="eq">‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ ‖<var>V</var>−<var>B<sup>π</sup>V</var>‖ + ‖<var>B<sup>π</sup>V</var>−<var>V<sup>π</sup></var>‖ = ‖<var>V</var>−<var>B<sup>π</sup>V</var>‖ + ‖<var>B<sup>π</sup>V</var>−<var>B<sup>π</sup>V<sup>π</sup></var>‖</div>
+    The last term is ≤ γ‖<var>V</var>−<var>V<sup>π</sup></var>‖ by part (a). Collecting the ‖<var>V</var>−<var>V<sup>π</sup></var>‖ terms:
+    <div class="eq">(1−γ)‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ ‖<var>V</var>−<var>B<sup>π</sup>V</var>‖ &nbsp;⟹&nbsp; ‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ <span class="frac"><span>‖<var>V</var>−<var>B<sup>π</sup>V</var>‖</span><span>1−γ</span></span>.</div>
+    Repeating verbatim with <var>B</var> and its fixed point <var>V</var><sup>∗</sup> gives the second inequality.</div>
+
+    <h4 class="part">(f) <span class="q">Let π be greedy w.r.t. <var>V</var>, and ε = ‖<var>BV</var>−<var>V</var>‖. Prove <var>V<sup>π</sup></var>(<var>s</var>) ≥ <var>V</var><sup>∗</sup>(<var>s</var>) − 2ε/(1−γ).</span></h4>
+    <div class="call intuit"><span class="lab">Key fact used everywhere below</span>
+    If π is <em>greedy</em> with respect to <var>V</var>, then π chooses exactly the action attaining the max in <var>BV</var>. Therefore <strong><var>B<sup>π</sup>V</var> = <var>BV</var></strong>. This one equality links the policy operator to the optimality operator.</div>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    Add and subtract <var>V</var>(<var>s</var>) and use the triangle inequality:
+    <div class="eq"><var>V</var><sup>∗</sup>(<var>s</var>) − <var>V<sup>π</sup></var>(<var>s</var>) ≤ |<var>V</var><sup>∗</sup>(<var>s</var>)−<var>V</var>(<var>s</var>)| + |<var>V</var>(<var>s</var>)−<var>V<sup>π</sup></var>(<var>s</var>)| ≤ ‖<var>V</var>−<var>V</var><sup>∗</sup>‖ + ‖<var>V</var>−<var>V<sup>π</sup></var>‖</div>
+    Bound each with part (e). The first: ‖<var>V</var>−<var>V</var><sup>∗</sup>‖ ≤ ‖<var>BV</var>−<var>V</var>‖/(1−γ) = ε/(1−γ). The second, using <var>B<sup>π</sup>V</var>=<var>BV</var>: ‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ ‖<var>V</var>−<var>B<sup>π</sup>V</var>‖/(1−γ) = ε/(1−γ). Adding,
+    <div class="eq"><var>V</var><sup>∗</sup>(<var>s</var>) − <var>V<sup>π</sup></var>(<var>s</var>) ≤ <span class="frac"><span>2ε</span><span>1−γ</span></span> &nbsp;⟹&nbsp; <var>V<sup>π</sup></var>(<var>s</var>) ≥ <var>V</var><sup>∗</sup>(<var>s</var>) − <span class="frac"><span>2ε</span><span>1−γ</span></span>.</div></div>
+
+    <h4 class="part">(g) <span class="q">A real-world use for a lower bound on <var>V<sup>π</sup></var>(<var>s</var>).</span></h4>
+    <p>Any <strong>safety- or cost-critical deployment</strong> where you must <em>certify</em> performance before going live: medical treatment policies, financial/portfolio allocation, autonomous driving, datacenter control. You run approximate value iteration, measure the Bellman error ε of the returned <var>V</var>, and the bound in (f) <em>guarantees</em> the deployed greedy policy is within 2ε/(1−γ) of optimal — <em>without ever knowing</em> <var>V</var><sup>∗</sup>. That converts "the algorithm converged" into a hard worst-case guarantee.</p>
+
+    <h4 class="part">(h) <span class="q">Another <var>V′</var> with greedy π′ and the same ε. Does the bound imply <var>V<sup>π</sup></var>(<var>s</var>) = <var>V<sup>π′</sup></var>(<var>s</var>) anywhere?</span></h4>
+    <p><strong>No.</strong> The bound is only a <em>lower</em> bound. Both <var>V<sup>π</sup></var> and <var>V<sup>π′</sup></var> satisfy the <em>same</em> inequality ≥ <var>V</var><sup>∗</sup> − 2ε/(1−γ), but sharing a lower bound says nothing about equality — two different value functions can both sit above the same floor. Equal Bellman-error magnitude does not pin down the policy or its value.</p>
+
+    <h4 class="part">(i) <span class="q">If additionally <var>V</var><sup>∗</sup> ≤ <var>V</var>, prove the tighter <var>V<sup>π</sup></var>(<var>s</var>) ≥ <var>V</var><sup>∗</sup>(<var>s</var>) − ε/(1−γ).</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    Recall every policy satisfies <var>V<sup>π</sup></var> ≤ <var>V</var><sup>∗</sup> (optimality of <var>V</var><sup>∗</sup>), and here <var>V</var><sup>∗</sup> ≤ <var>V</var>, so <var>V<sup>π</sup></var> ≤ <var>V</var> and thus <var>V</var>−<var>V<sup>π</sup></var> ≥ 0. Split the gap:
+    <div class="eq"><var>V</var><sup>∗</sup>(<var>s</var>) − <var>V<sup>π</sup></var>(<var>s</var>) = [<var>V</var><sup>∗</sup>(<var>s</var>)−<var>V</var>(<var>s</var>)] + [<var>V</var>(<var>s</var>)−<var>V<sup>π</sup></var>(<var>s</var>)]</div>
+    The first bracket is ≤ 0 (since <var>V</var> ≥ <var>V</var><sup>∗</sup>). The second equals |<var>V</var>(<var>s</var>)−<var>V<sup>π</sup></var>(<var>s</var>)| ≤ ‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ ε/(1−γ) as in (f). Hence <var>V</var><sup>∗</sup>(<var>s</var>) − <var>V<sup>π</sup></var>(<var>s</var>) ≤ ε/(1−γ). The extra assumption kills one of the two ε/(1−γ) terms — halving the bound.</div>
+
+    <h4 class="part">(j) &amp; (k) <span class="q">Challenge parts (ungraded).</span></h4>
+    <div class="call proof"><span class="lab">(j) If <var>BV</var> ≤ <var>V</var> then <var>V</var><sup>∗</sup> ≤ <var>V</var></span><span class="qed">∎</span>
+    <var>B</var> is monotone (part c analog). Apply it to <var>BV</var> ≤ <var>V</var>: <var>B</var>²<var>V</var> ≤ <var>BV</var> ≤ <var>V</var>. By induction <var>B</var><sup><var>n</var></sup><var>V</var> ≤ <var>V</var> for all <var>n</var>. Because <var>B</var> is a contraction, lim<sub><var>n</var>→∞</sub> <var>B</var><sup><var>n</var></sup><var>V</var> = <var>V</var><sup>∗</sup>. Taking the limit of both sides preserves ≤, giving <var>V</var><sup>∗</sup> ≤ <var>V</var>. This is useful because <var>BV</var> ≤ <var>V</var> is <em>checkable</em> without knowing <var>V</var><sup>∗</sup>.</div>
+    <div class="call proof"><span class="lab">(k) Tighter γε bounds</span><span class="qed">∎</span>
+    Apply one <em>extra</em> Bellman backup. Using <var>B<sup>π</sup>V</var>=<var>BV</var>, <var>V<sup>π</sup></var>=<var>B<sup>π</sup>V<sup>π</sup></var>, <var>V</var><sup>∗</sup>=<var>BV</var><sup>∗</sup>:
+    <div class="eq"><var>V</var><sup>∗</sup>(<var>s</var>)−<var>V<sup>π</sup></var>(<var>s</var>) = [<var>V</var><sup>∗</sup>(<var>s</var>)−(<var>B<sup>π</sup>V</var>)(<var>s</var>)] + [(<var>B<sup>π</sup>V</var>)(<var>s</var>)−<var>V<sup>π</sup></var>(<var>s</var>)]</div>
+    The first bracket = (<var>BV</var><sup>∗</sup>)(<var>s</var>)−(<var>BV</var>)(<var>s</var>) ≤ γ‖<var>V</var><sup>∗</sup>−<var>V</var>‖ ≤ γε/(1−γ). The second = (<var>B<sup>π</sup>V</var>)(<var>s</var>)−(<var>B<sup>π</sup>V<sup>π</sup></var>)(<var>s</var>) ≤ γ‖<var>V</var>−<var>V<sup>π</sup></var>‖ ≤ γε/(1−γ). Sum: <var>V<sup>π</sup></var>(<var>s</var>) ≥ <var>V</var><sup>∗</sup>(<var>s</var>) − 2γε/(1−γ). If <var>V</var><sup>∗</sup> ≤ <var>V</var>, the first bracket is ≤ 0 (monotonicity), leaving the single-term bound <var>V<sup>π</sup></var>(<var>s</var>) ≥ <var>V</var><sup>∗</sup>(<var>s</var>) − γε/(1−γ).</div>
+    <div class="call intuit"><span class="lab">The big picture of Q3</span>
+    A constant per-step reward <var>r</var> compounds to <var>r</var>/(1−γ) of return. So an ε-Bellman-error value function yields a greedy policy whose <em>average per-step</em> reward is off by at most ~2ε. <strong>Reduce the Bellman residual → automatically bound how good the extracted policy is.</strong> That is the theoretical license behind every approximate-VI / approximate-DP method.</div>
+
+    <!-- Q4 -->
+    <h3 class="prob">Q4 · RiverSwim — implement VI &amp; PI <span class="pts">25 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — the environment</span>
+    6 states (0=far-left start, 5=far-right). <code class="inl">LEFT</code> is easy (downstream, deterministic); <code class="inl">RIGHT</code> fights the current. Small reward <strong>0.005</strong> for <code class="inl">LEFT</code> at state 0, big reward <strong>1.0</strong> for <code class="inl">RIGHT</code> at state 5. Swimming right succeeds w.p. 0.6 stay / (0.4 − 0.09·<var>c</var>) forward / 0.09·<var>c</var> back, where current <var>c</var> ∈ {1,2,3}. Stronger current ⟹ smaller forward probability (0.31 / 0.22 / 0.13).</div>
+
+    <p class="file">A1_RiverSwim_MDP/vi_and_pi.py</p>
+    <h4 class="part">(a) <span class="q">bellman_backup</span></h4>
+    <pre class="code"><span class="kw">def</span> bellman_backup(state, action, R, T, gamma, V):
+    backup_val = R[state, action] + gamma * np.sum(T[state, action] * V)
+    <span class="kw">return</span> backup_val</pre>
+    <p>A direct transcription of <var>Q</var>(<var>s</var>,<var>a</var>) = <var>r</var>(<var>s</var>,<var>a</var>) + γ Σ<sub><var>s'</var></sub> <var>T</var>(<var>s'</var>|<var>s</var>,<var>a</var>)<var>V</var>(<var>s'</var>). <code class="inl">T[state,action]</code> is a length-6 probability vector; <code class="inl">T[state,action] * V</code> is the elementwise product and <code class="inl">np.sum</code> collapses it to the expected next-state value. Correct and clean.</p>
+
+    <h4 class="part">(b) <span class="q">policy_evaluation, policy_improvement, policy_iteration</span></h4>
+    <pre class="code"><span class="com"># policy_evaluation: iterate V ← B^π V until it stops moving</span>
+V_last = np.ones(num_states)                <span class="com"># seed ≠ value_function so the loop starts</span>
+<span class="kw">while</span> np.linalg.norm(V_last - value_function, np.inf) &gt; tol:
+    V_last = np.copy(value_function)         <span class="com"># deep copy — important!</span>
+    <span class="kw">for</span> i <span class="kw">in</span> range(num_states):
+        value_function[i] = bellman_backup(i, policy[i], R, T, gamma, V_last)
+
+<span class="com"># policy_improvement: greedy action per state (vectorized argmax over Q)</span>
+new_policy = np.argmax(R + gamma * np.sum(T * V_policy, axis=2), axis=1)
+
+<span class="com"># policy_iteration: alternate evaluate / improve until the policy is stable</span>
+<span class="kw">while</span> True:
+    V_policy   = policy_evaluation(policy, R, T, gamma, tol)
+    new_policy = policy_improvement(policy, R, T, V_policy, gamma)
+    <span class="kw">if</span> np.linalg.norm(new_policy - policy) &gt; tol:
+        policy = new_policy
+    <span class="kw">else</span>:
+        <span class="kw">break</span></pre>
+    <div class="call concept"><span class="lab">Concept refresher — policy iteration</span>
+    Two nested loops. <em>Evaluation</em> solves <var>V<sup>π</sup></var> = <var>B<sup>π</sup>V<sup>π</sup></var> for the current π (a fixed-point iteration). <em>Improvement</em> makes π greedy w.r.t. that <var>V<sup>π</sup></var>. The policy-improvement theorem guarantees each round is a monotone improvement, and with finitely many policies it converges to π<sup>∗</sup> in a small number of rounds.</div>
+    <p>The vectorized <code class="inl">policy_improvement</code> is the elegant bit: <code class="inl">T</code> is (S,A,S), <code class="inl">T * V_policy</code> broadcasts <var>V</var> over the last axis, <code class="inl">np.sum(..., axis=2)</code> gives expected next-state values shaped (S,A), add <code class="inl">R</code>, and <code class="inl">argmax(axis=1)</code> picks the best action per state.</p>
+    <div class="call bug"><span class="lab">Minor issue — convergence test on integer policies</span>
+    <code class="inl">np.linalg.norm(new_policy - policy) &gt; tol</code> compares two integer action vectors with a float tolerance. It happens to work (identical policies → norm 0 &lt; tol; any change → norm ≥ 1 &gt; tol), but it's semantically odd. Prefer <code class="inl">if not np.array_equal(new_policy, policy): policy = new_policy; else: break</code> — that's exactly "loop until the policy stops changing" and can't be tripped up by the tolerance.</div>
+
+    <h4 class="part">(c) <span class="q">value_iteration</span></h4>
+    <pre class="code"><span class="kw">while</span> True:
+    last_v = np.copy(value_function)
+    <span class="kw">for</span> i <span class="kw">in</span> range(num_states):
+        value_function[i] = np.max(R[i] + gamma * np.sum(T[i] * last_v, axis=1))
+    policy = np.argmax(R + gamma * np.sum(T * value_function, axis=2), axis=1)
+    <span class="kw">if</span> np.linalg.norm(last_v - value_function, np.inf) &lt; tol:
+        <span class="kw">break</span></pre>
+    <p>VI applies the <em>optimality</em> operator directly: <var>V</var>(<var>s</var>) ← max<sub><var>a</var></sub> <var>Q</var>(<var>s</var>,<var>a</var>). It never explicitly stores a policy during the loop — it just contracts <var>V</var> toward <var>V</var><sup>∗</sup> — then reads off the greedy policy once. Correct. (The inner per-state <code class="inl">for</code> could also be fully vectorized like the policy line, but 6 states makes it irrelevant.)</p>
+
+    <h4 class="part">(d) <span class="q">Largest γ (2 d.p.) for which the optimum at the far-left state does <em>not</em> swim RIGHT — weak, medium, strong.</span></h4>
+    <p>I ran the solver directly. The largest two-decimal γ at which the optimal action in state 0 is <code class="inl">LEFT</code> (bank the safe 0.005) rather than <code class="inl">RIGHT</code>:</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Current</th><th>P(swim forward)</th><th>Largest γ staying LEFT</th><th><var>V</var>(<var>s</var><sub>1</sub>) at γ=0.99</th><th><var>V</var>(<var>s</var><sub>6</sub>) at γ=0.99</th></tr></thead>
+      <tbody>
+        <tr><td>Weak (c=1)</td><td class="n">0.31</td><td class="n">0.66</td><td class="n">30.43</td><td class="n">36.96</td></tr>
+        <tr><td>Medium (c=2)</td><td class="n">0.22</td><td class="n">0.77</td><td class="n">11.72</td><td class="n">17.78</td></tr>
+        <tr><td>Strong (c=3)</td><td class="n">0.13</td><td class="n">0.93</td><td class="n">1.19</td><td class="n">5.26</td></tr>
+      </tbody>
+    </table></div>
+    <div class="call intuit"><span class="lab">Interpretation</span>
+    <strong>Quantitatively:</strong> the threshold rises 0.66 → 0.77 → 0.93 as the current strengthens, and the state values at fixed γ=0.99 collapse (30 → 12 → 1) because the +1 goal becomes far slower and less certain to reach. <strong>Qualitatively:</strong> swimming upstream is an <em>investment</em> — you burn near-term reward now for a distant +1 later. A stronger current lowers the forward probability, so the payoff arrives later and less reliably; you must value the future more heavily (larger γ) before the swim is worth it. Below the threshold, the guaranteed 0.005/step from lounging at the bank beats the discounted, current-fought jackpot. (Sanity check from the handout, γ=0.99 weak: 30.328 / 36.859 — matches to tolerance.)</div>
+  </section>
+
+  <!-- =========================== A2 =========================== -->
+  <section class="asg" id="a2">
+    <div class="asg-head"><span class="asg-num">A2</span><h2>Policy gradient methods: REINFORCE, baselines, PPO</h2></div>
+    <p class="asg-sub">DQN concepts · the policy-gradient family and its variance-reduction and off-policy variants · policy-induced distributions.</p>
+
+    <!-- Q1 -->
+    <h3 class="prob">Q1 · Deep Q-Networks (written) <span class="pts">8 pts</span></h3>
+    <h4 class="part">(a) <span class="q">Three key differences between DQN and tabular Q-learning.</span></h4>
+    <ol>
+      <li><strong>Function approximation.</strong> DQN approximates <var>Q</var>(<var>s</var>,<var>a</var>;θ) with a deep neural net (generalizes across states, handles huge/continuous observation spaces); tabular Q-learning stores one number per (<var>s</var>,<var>a</var>).</li>
+      <li><strong>Experience replay.</strong> DQN stores transitions in a buffer and trains on random minibatches, decorrelating consecutive samples and reusing data; Q-learning updates online from the single most-recent transition.</li>
+      <li><strong>Target network.</strong> DQN computes bootstrap targets with a separate, periodically-synced network <var>Q̂</var>(·;θ<sup>−</sup>); Q-learning bootstraps off the same, constantly-moving <var>Q</var>. The frozen target stabilizes the regression.</li>
+    </ol>
+    <h4 class="part">(b) <span class="q">Which component contributes most to performance gains? Justify.</span></h4>
+    <p><strong>Experience replay</strong> is the single biggest contributor. The Nature-2015 DQN ablation removed each trick in turn: dropping replay caused by far the largest score collapse across games, larger than removing the target network. Two reasons: (1) it breaks the strong temporal correlation of on-policy trajectories, which otherwise makes SGD unstable and biased; (2) it reuses each transition many times, hugely improving sample efficiency. The target network matters too (it prevents the "chasing a moving target" divergence), but replay is what makes non-linear function approximation trainable at all.</p>
+    <h4 class="part">(c) <span class="q">What if the target network is updated only every ~10¹⁵ steps for a simple game like Pong?</span></h4>
+    <p>With such an astronomically large period <var>C</var>, θ<sup>−</sup> is effectively <em>frozen at its random initialization</em> for the entire run. Every target <var>y</var><sub><var>j</var></sub> = <var>r</var><sub><var>j</var></sub> + γ max <var>Q̂</var>(<var>s</var><sub><var>j</var>+1</sub>,·;θ<sup>−</sup>) is computed from a fixed, meaningless network, so improvements in <var>Q</var> never propagate into the targets it is regressing toward. Reward information cannot bootstrap backward through time; learning stalls and the agent never gets good at Pong. (The opposite failure — updating <em>every</em> 10–15 steps — is also bad: the target moves almost as fast as <var>Q</var>, reintroducing the oscillation/divergence the target network was meant to cure. The sweet spot is an intermediate <var>C</var>.)</p>
+
+    <!-- Q2 -->
+    <h3 class="prob">Q2 · Policy gradient — coding &amp; writeup <span class="pts">54 + 26 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — the policy gradient</span>
+    <div class="eq">∇<sub>θ</sub><var>J</var>(θ) = 𝔼<sub>π<sub>θ</sub></sub>[ ∇<sub>θ</sub> log π<sub>θ</sub>(<var>a</var>|<var>s</var>) · <var>Q</var><sup>π</sup>(<var>s</var>,<var>a</var>) ]</div>
+    REINFORCE replaces <var>Q</var><sup>π</sup> with the sampled return <var>G</var><sub><var>t</var></sub> (unbiased, high variance). Subtracting a state-dependent <em>baseline</em> <var>b</var>(<var>s</var>) ≈ <var>V</var>(<var>s</var>) leaves the gradient unbiased but cuts variance; the result <var>Â</var><sub><var>t</var></sub> = <var>G</var><sub><var>t</var></sub> − <var>b</var>(<var>s</var><sub><var>t</var></sub>) is an advantage estimate.</div>
+
+    <p class="file">code/network_utils.py · build_mlp</p>
+    <pre class="code">layers = [nn.Linear(input_size, size), nn.ReLU()]
+<span class="kw">for</span> _ <span class="kw">in</span> range(n_layers - 1):
+    layers += [nn.Linear(size, size), nn.ReLU()]
+layers.append(nn.Linear(size, output_size))     <span class="com"># final layer linear, no ReLU</span>
+model = nn.Sequential(*layers)</pre>
+    <p>Builds <code class="inl">[Linear→ReLU]×n_layers → Linear</code>. Matches the spec exactly: <var>n_layers</var> hidden ReLU layers, a linear head. This is the shared trunk for both policies and the baseline.</p>
+
+    <p class="file">code/policy.py</p>
+    <pre class="code"><span class="com"># BasePolicy.act — sample an action and (optionally) its log-prob</span>
+act_dist = self.action_distribution(observations)
+sampled_actions = act_dist.sample()
+log_probs = act_dist.log_prob(sampled_actions).detach().numpy()
+sampled_actions = sampled_actions.detach().numpy()
+
+<span class="com"># CategoricalPolicy — discrete actions: net outputs logits</span>
+distribution = ptd.Categorical(logits=self.network(observations))
+
+<span class="com"># GaussianPolicy — continuous actions</span>
+self.log_std = nn.Parameter(torch.zeros(action_dim))   <span class="com"># learned, state-independent</span>
+<span class="kw">def</span> std(self):     <span class="kw">return</span> torch.exp(self.log_std)
+<span class="kw">def</span> action_distribution(self, obs):
+    loc = self.network(obs)
+    std = torch.square(self.std())                     <span class="com"># σ² = variance</span>
+    <span class="kw">return</span> ptd.MultivariateNormal(loc, covariance_matrix=torch.diag(std))</pre>
+    <div class="call concept"><span class="lab">Concept refresher — why log_std, not std</span>
+    Standard deviation must be positive. Parameterizing <code class="inl">log_std</code> freely in ℝ and exponentiating guarantees σ = <var>e</var><sup>log_std</sup> &gt; 0 with no constraints on the optimizer. Keeping it a <em>state-independent</em> <code class="inl">nn.Parameter</code> (rather than a network output) is the common, stable choice for continuous control.</div>
+    <div class="call intuit"><span class="lab">A confusing-but-correct line worth pausing on</span>
+    <code class="inl">std = torch.square(self.std())</code> reads like a bug — it's squaring the standard deviation. But <code class="inl">MultivariateNormal</code>'s <code class="inl">covariance_matrix</code> argument wants <em>variances</em> on the diagonal, and variance = σ². So the math is right; only the variable name is misleading. Rename it <code class="inl">var</code> for clarity. Also, <code class="inl">.numpy()</code> in <code class="inl">act</code> assumes CPU tensors — on a GPU it would throw; use <code class="inl">.detach().cpu().numpy()</code> for portability.</div>
+
+    <p class="file">code/policy_gradient.py</p>
+    <pre class="code"><span class="com"># get_returns — O(T) reverse accumulation of discounted returns</span>
+returns = rewards.copy()
+<span class="kw">for</span> i <span class="kw">in</span> range(len(rewards) - 2, -1, -1):
+    returns[i] += self.config.gamma * returns[i + 1]   <span class="com"># G_t = r_t + γ G_{t+1}</span>
+
+<span class="com"># normalize_advantage — zero mean, unit std</span>
+normalized = (advantages - np.mean(advantages)) / np.std(advantages)
+
+<span class="com"># update_policy — one gradient ascent step on E[log π · Â]</span>
+self.optimizer.zero_grad()
+dist = self.policy.action_distribution(observations)
+log_prob = dist.log_prob(actions)
+loss = -torch.sum(log_prob * advantages) / observations.shape[0]   <span class="com"># minus ⇒ ascent</span>
+loss.backward(); self.optimizer.step()</pre>
+    <p>The <code class="inl">get_returns</code> reverse pass is precisely the answer to writeup (a) below. <code class="inl">update_policy</code> negates the objective because PyTorch minimizes — minimizing −<var>J</var> maximizes <var>J</var>. Dividing by the batch size makes the step size insensitive to how many transitions landed in the batch.</p>
+
+    <p class="file">code/baseline_network.py</p>
+    <pre class="code">self.network = build_mlp(obs_dim, 1, n_layers, layer_size)   <span class="com"># scalar V(s)</span>
+<span class="kw">def</span> forward(self, obs):  <span class="kw">return</span> torch.flatten(self.network(obs))   <span class="com"># [B,1] → [B]</span>
+
+<span class="kw">def</span> calculate_advantage(self, returns, obs):
+    baseline = self(np2torch(obs)).detach().numpy()
+    <span class="kw">return</span> returns - baseline                                 <span class="com"># Â = G − b(s)</span>
+
+<span class="kw">def</span> update_baseline(self, returns, obs):
+    self.optimizer.zero_grad()
+    loss = F.mse_loss(self(np2torch(obs)), np2torch(returns))  <span class="com"># fit b(s) → G_t</span>
+    loss.backward(); self.optimizer.step()</pre>
+    <p>The baseline is a second network trained by regression to predict the return from each state. Crucially, <code class="inl">calculate_advantage</code> calls <code class="inl">.detach()</code> — the advantage must be treated as a <em>constant</em> when differentiating the policy loss, otherwise gradients would leak from the policy objective into the baseline. Correct.</p>
+
+    <p class="file">code/ppo.py · update_policy</p>
+    <pre class="code">dist = self.policy.action_distribution(observations)
+log_probs = dist.log_prob(actions)
+ratio = torch.exp(log_probs - old_logprobs)                        <span class="com"># z = π_θ / π_old</span>
+clipped = torch.clip(ratio, 1 - self.eps_clip, 1 + self.eps_clip)
+loss = -torch.sum(torch.minimum(ratio * advantages,
+                                clipped * advantages)) / T          <span class="com"># clipped surrogate</span>
+loss.backward(); self.optimizer.step()</pre>
+    <div class="call concept"><span class="lab">Concept refresher — PPO in one idea</span>
+    REINFORCE is on-policy: collect a batch, take <em>one</em> step, throw the batch away. PPO squeezes <em>several</em> updates out of each batch by importance-weighting with the ratio <var>z</var> = π<sub>θ</sub>/π<sub>old</sub>, and <em>clipping</em> that ratio to [1−ε, 1+ε] so no single update drifts too far off-policy. The <code class="inl">min</code> makes the surrogate a pessimistic (lower) bound on the true improvement.</div>
+    <p>Note in <code class="inl">ppo.py</code> the rollout caches <code class="inl">old_logprobs</code> at collection time, and the training loop runs <code class="inl">update_freq</code> inner updates per batch (the "reuse the batch" behavior). Both are the reason PPO needs the cached log-probs — see writeup (c).</p>
+
+    <h4 class="part">Writeup (a) <span class="q">Compute all {<var>G</var><sub><var>t</var></sub>} in O(T) instead of O(T²).</span></h4>
+    <p>Accumulate <em>backward</em>: <var>G</var><sub><var>T</var></sub> = <var>r</var><sub><var>T</var></sub>, and <var>G</var><sub><var>t</var></sub> = <var>r</var><sub><var>t</var></sub> + γ<var>G</var><sub><var>t</var>+1</sub>. One right-to-left pass reuses the already-computed suffix sum, so each of the <var>T</var> returns costs O(1) — total O(<var>T</var>). That is exactly the reverse loop in <code class="inl">get_returns</code>.</p>
+
+    <h4 class="part">Writeup (b) <span class="q">When is the gradient of the clipped PPO loss zero, and why?</span></h4>
+    <p>Let <var>z</var> be the ratio and <var>Â</var> the advantage. Working through the <code class="inl">min</code> and <code class="inl">clip</code>:</p>
+    <div class="eq">∇ = 0 &nbsp;⟺&nbsp; (<var>Â</var> &gt; 0 and <var>z</var> ≥ 1+ε) &nbsp;or&nbsp; (<var>Â</var> &lt; 0 and <var>z</var> ≤ 1−ε)</div>
+    <p>In those regions the clipped branch <code class="inl">(1±ε)·Â</code> — a constant in θ — is the one selected by the <code class="inl">min</code>, so its derivative vanishes. <strong>Why:</strong> when the advantage is positive and the policy has <em>already</em> increased this action's probability past 1+ε, PPO stops rewarding further increases — it refuses to push an already-large, already-beneficial update even larger. Symmetrically for <var>Â</var>&lt;0 once probability has dropped below 1−ε. But note the asymmetry: if <var>Â</var>&gt;0 and <var>z</var>&lt;1−ε (an <em>overshoot in the wrong direction</em>), the unclipped term is the <code class="inl">min</code> and the gradient is nonzero — PPO still pulls back. Clipping caps beneficial-direction steps but never stops corrective ones.</p>
+
+    <h4 class="part">Writeup (c) <span class="q">Why does REINFORCE not cache the sampling log-prob, but PPO must?</span></h4>
+    <p>REINFORCE takes exactly one gradient step per batch <em>using the current policy</em>. The log π(<var>a</var>|<var>s</var>) it needs is recomputed live from the current network (and must stay differentiable), so there is nothing to cache. PPO instead performs <em>multiple</em> updates per batch and needs the ratio <var>z</var> = π<sub>θ</sub>/π<sub>old</sub>, where π<sub>old</sub> is the fixed policy that generated the data. Its log-probs are constants, so they're recorded at rollout time and detached. <strong>If they hadn't been collected:</strong> before each round of updates you'd have to snapshot the old policy's parameters (a frozen copy or saved <code class="inl">state_dict</code>) and recompute <code class="inl">old_logprobs = old_policy.log_prob(actions).detach()</code> from that copy — extra bookkeeping and compute that caching avoids.</p>
+
+    <h4 class="part">Writeup (d) <span class="q">Run all three methods across seeds/envs and comment.</span></h4>
+    <p>The repo already contains completed runs under <code class="inl">code/results/</code> (CartPole, seeds 1–3, for baseline / no-baseline / ppo). Expected story, consistent with the sanity checks:</p>
+    <ul>
+      <li><strong>No baseline:</strong> learns but with high variance — noisy, oscillating return curves, slower to reach the ceiling.</li>
+      <li><strong>Baseline:</strong> markedly lower variance and faster, more stable climb (the baseline is doing its variance-reduction job).</li>
+      <li><strong>PPO:</strong> most sample-efficient per environment step because it reuses each batch for several updates; stable thanks to clipping.</li>
+      <li>All three should hit the targets: 200 on CartPole, 1000 on Pendulum, ≥200 on Cheetah, even if they don't hold the peak.</li>
+    </ul>
+
+    <!-- Q3 -->
+    <h3 class="prob">Q3 · Distributions induced by a policy <span class="pts">13 pts</span></h3>
+    <h4 class="part">(a) <span class="q">Probability ρ<sup>π</sup>(τ) of a trajectory τ = (<var>s</var><sub>0</sub>,<var>a</var><sub>0</sub>,<var>s</var><sub>1</sub>,…).</span></h4>
+    <div class="eq">ρ<sup>π</sup>(τ) = ∏<sub><var>t</var>=0</sub><sup>∞</sup> π(<var>a</var><sub><var>t</var></sub>|<var>s</var><sub><var>t</var></sub>) · <var>P</var>(<var>s</var><sub><var>t</var>+1</sub>|<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>)</div>
+    <p>The starting state <var>s</var><sub>0</sub> is fixed, so it contributes a factor of 1. Each step multiplies the probability of the chosen action (from the policy) by the probability of the resulting transition (from the dynamics).</p>
+    <h4 class="part">(b) <span class="q"><var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub> = <var>s</var>): probability of being in <var>s</var> at time <var>t</var>.</span></h4>
+    <p>Marginalize the trajectory distribution over everything except <var>s</var><sub><var>t</var></sub>:</p>
+    <div class="eq"><var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>) = Σ<sub><var>s</var><sub>0:<var>t</var>−1</sub>, <var>a</var><sub>0:<var>t</var>−1</sub></sub> 𝟙[<var>s</var><sub><var>t</var></sub>=<var>s</var>] ∏<sub><var>k</var>=0</sub><sup><var>t</var>−1</sup> π(<var>a</var><sub><var>k</var></sub>|<var>s</var><sub><var>k</var></sub>) <var>P</var>(<var>s</var><sub><var>k</var>+1</sub>|<var>s</var><sub><var>k</var></sub>,<var>a</var><sub><var>k</var></sub>)</div>
+    <p>(Equivalently the recursion <var>p</var><sup>π</sup>(<var>s'</var> at <var>t</var>+1) = Σ<sub><var>s</var>,<var>a</var></sub> <var>p</var><sup>π</sup>(<var>s</var> at <var>t</var>) π(<var>a</var>|<var>s</var>) <var>P</var>(<var>s'</var>|<var>s</var>,<var>a</var>), starting from <var>p</var><sup>π</sup>(<var>s</var><sub>0</sub>)=𝟙[<var>s</var>=<var>s</var><sub>0</sub>].)</p>
+    <h4 class="part">(c) <span class="q">Prove 𝔼<sub>τ~ρ<sup>π</sup></sub>[Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>f</var>(<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>)] = <span class="frac"><span>1</span><span>1−γ</span></span> 𝔼<sub><var>s</var>~<var>d</var><sup>π</sup></sub>[ 𝔼<sub><var>a</var>~π(<var>s</var>)</sub>[<var>f</var>(<var>s</var>,<var>a</var>)] ].</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    Swap the (absolutely convergent) sum and expectation, then note the time-<var>t</var> term depends on τ only through the marginal (<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>):
+    <div class="eq">LHS = Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> 𝔼[<var>f</var>(<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>)] = Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> Σ<sub><var>s</var></sub> <var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>) Σ<sub><var>a</var></sub> π(<var>a</var>|<var>s</var>) <var>f</var>(<var>s</var>,<var>a</var>)</div>
+    Exchange the <var>t</var> and <var>s</var> sums and pull the inner action-expectation out:
+    <div class="eq">= Σ<sub><var>s</var></sub> [ Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>) ] 𝔼<sub><var>a</var>~π(<var>s</var>)</sub>[<var>f</var>(<var>s</var>,<var>a</var>)]</div>
+    The bracket is exactly <var>d</var><sup>π</sup>(<var>s</var>)/(1−γ) by the definition <var>d</var><sup>π</sup>(<var>s</var>) = (1−γ)Σ<sub><var>t</var></sub>γ<sup><var>t</var></sup><var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>). Substituting gives <span class="frac"><span>1</span><span>1−γ</span></span> Σ<sub><var>s</var></sub> <var>d</var><sup>π</sup>(<var>s</var>) 𝔼<sub><var>a</var>~π(<var>s</var>)</sub>[<var>f</var>] = RHS. (Sanity: <var>f</var>≡1 gives Σγ<sup><var>t</var></sup>=1/(1−γ) on both sides.)</div>
+
+    <h4 class="part">(d) <span class="q">Prove the performance-difference lemma: <var>V</var><sup>π</sup>(<var>s</var><sub>0</sub>) − <var>V</var><sup>π′</sup>(<var>s</var><sub>0</sub>) = <span class="frac"><span>1</span><span>1−γ</span></span> 𝔼<sub><var>s</var>~<var>d</var><sup>π</sup></sub>[ 𝔼<sub><var>a</var>~π(<var>s</var>)</sub>[<var>A</var><sup>π′</sup>(<var>s</var>,<var>a</var>)] ].</span></h4>
+    <div class="call proof"><span class="lab">Proof</span><span class="qed">∎</span>
+    Take a trajectory generated by <strong>π</strong> from <var>s</var><sub>0</sub> and expand the advantage of the <em>other</em> policy π′ using <var>A</var><sup>π′</sup>(<var>s</var>,<var>a</var>) = <var>r</var>(<var>s</var>,<var>a</var>) + γ𝔼[<var>V</var><sup>π′</sup>(<var>s'</var>)] − <var>V</var><sup>π′</sup>(<var>s</var>):
+    <div class="eq">𝔼<sub>τ~ρ<sup>π</sup></sub>[ Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>A</var><sup>π′</sup>(<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>) ] = 𝔼[ Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>r</var><sub><var>t</var></sub> ] + 𝔼[ Σ<sub><var>t</var></sub> ( γ<sup><var>t</var>+1</sup><var>V</var><sup>π′</sup>(<var>s</var><sub><var>t</var>+1</sub>) − γ<sup><var>t</var></sup><var>V</var><sup>π′</sup>(<var>s</var><sub><var>t</var></sub>) ) ]</div>
+    The first term is <var>V</var><sup>π</sup>(<var>s</var><sub>0</sub>). The second is a <strong>telescoping sum</strong>: everything cancels except the very first <var>t</var>=0 term, leaving −<var>V</var><sup>π′</sup>(<var>s</var><sub>0</sub>). So the left side equals <var>V</var><sup>π</sup>(<var>s</var><sub>0</sub>) − <var>V</var><sup>π′</sup>(<var>s</var><sub>0</sub>). Now apply part (c) with <var>f</var> = <var>A</var><sup>π′</sup> to rewrite the left side as <span class="frac"><span>1</span><span>1−γ</span></span> 𝔼<sub><var>s</var>~<var>d</var><sup>π</sup></sub>𝔼<sub><var>a</var>~π</sub>[<var>A</var><sup>π′</sup>]. Equate.</div>
+    <div class="call intuit"><span class="lab">Why this matters</span>
+    This identity is the theoretical backbone of TRPO and PPO: it expresses the improvement of a new policy π (=π<sub>θ</sub> after an update) over the old π′ purely in terms of the old policy's advantage, averaged under the new policy's state distribution. Controlling how far π moves from π′ (the clip / KL constraint) controls how trustworthy this estimate is — which is exactly what the clipped objective in Q2 enforces.</div>
+
+    <!-- Q4 -->
+    <h3 class="prob">Q4 · Ethics of policy gradients (RL on humans) <span class="pts">5 pts</span></h3>
+    <h4 class="part">(a) <span class="q">Two design choices that respect the Belmont principles.</span></h4>
+    <p><strong>Choice 1 — informed opt-in with the ability to withdraw (Respect for persons).</strong> Students should be told they may be assigned an experimental AI tutor of varying quality, consent explicitly, and be able to leave the study for full human help at any time. Without this, participants are enrolled in an experiment affecting their grades without agency over their own education — a direct violation of respect for persons/autonomy.</p>
+    <p><strong>Choice 2 — a safety net that equalizes downside risk (Beneficence / Justice).</strong> Guarantee every student a floor of quality help — e.g. any student who received the (possibly weaker) early-stage chatbot can revise with a human CA before grading, or grades are curved to remove condition effects. Otherwise the harm of poor early-model advice falls unequally on whoever happened to be assigned more chatbot hours early in the term, violating justice (unequal distribution of risk) and beneficence (failing to minimize harm).</p>
+    <h4 class="part">(b) <span class="q">What Stanford process gives clearance?</span></h4>
+    <p>Because it experiments on human subjects, it requires <strong>IRB approval</strong> before any data collection. At Stanford that means preparing a research protocol and submitting it to the <strong>Stanford IRB / Research Compliance Office</strong> through the <strong>eProtocol</strong> system for review and approval, and not beginning the study until approval is granted.</p>
+  </section>
+
+  <!-- =========================== A3 =========================== -->
+  <section class="asg" id="a3">
+    <div class="asg-head"><span class="asg-num">A3</span><h2>Learning from human preferences: RLHF, DPO, bandits</h2></div>
+    <p class="asg-sub">Reward engineering on Hopper · a reward model from preferences · direct preference optimization · best-arm identification.</p>
+
+    <!-- Q1 -->
+    <h3 class="prob">Q1 · Reward engineering <span class="pts">6 + 7 pts</span></h3>
+    <h4 class="part">(a) <span class="q">Why is reward engineering hard? Risks? Give a deceptively-adequate reward.</span></h4>
+    <p>It's hard because human intent is rich, contextual, and multi-objective, but a reward must be a single scalar defined over states/actions the designer can measure — so the map from "what we want" to "what we can score" is lossy. The risk is <strong>specification gaming / reward hacking</strong>: the agent maximizes the literal reward through behavior the designer never intended, sometimes catastrophically. <strong>Example:</strong> a vacuum robot rewarded for "amount of dust collected" learns to dump collected dust back out and re-vacuum it, maximizing throughput while never cleaning the room. (Classic real instance: the CoastRunners boat rewarded for score loops forever collecting power-ups instead of finishing the race.)</p>
+    <h4 class="part">(b) <span class="q">Hopper: describe the goal and each reward term.</span></h4>
+    <p>Goal: make a one-legged "hopper" hop <em>forward</em> as fast as possible without falling over. The reward is a sum of three terms: <strong>(1) a healthy/alive bonus</strong> — a positive constant for each timestep the hopper stays in its valid upright configuration, encouraging it not to fall; <strong>(2) a forward-progress reward</strong> — proportional to forward (+x) velocity, the actual objective; <strong>(3) a control cost</strong> — a negative penalty on the squared action/torque, encouraging energy-efficient, smooth movement rather than flailing. (Reasonable critique: the alive bonus can dominate early, teaching the agent to stand still and survive rather than hop; one could down-weight it or ramp the forward term.)</p>
+    <h4 class="part">(c) <span class="q">What are "healthy" states? One advantage and one disadvantage of early termination.</span></h4>
+    <p>"Healthy" is a box of state constraints — torso height within a range, joint angles/state values bounded and finite — meaning the hopper is upright and hasn't collapsed. Leaving that set ends the episode. <strong>Advantage:</strong> it stops wasting samples simulating a fallen, unrecoverable robot, so learning is faster and the alive bonus + termination together give a clear "don't fall" signal. <strong>Disadvantage:</strong> it biases the learned task — the agent never experiences near-fall recovery states (it's terminated first), so it can learn overly conservative behavior, and the survival incentive interacts with the alive bonus to sometimes reward timid hopping. It also makes returns across episodes of different lengths harder to compare.</p>
+    <h4 class="part">(d) <span class="q">(coding) Train PPO on Hopper with/without early termination, 3 seeds.</span></h4>
+    <p>Handled by the provided <code class="inl">ppo_hopper.py</code> (uses Stable-Baselines3 PPO). The repo's <code class="inl">results/</code> contains both conditions for seed 1 with saved scores, plots, and rollout videos. The point of the exercise is to observe (writeup e–g) that early termination trains faster in wall-clock/epochs, and to inspect whether the resulting gait is what you'd expect.</p>
+
+    <!-- Q2 -->
+    <h3 class="prob">Q2 · Learning from preferences (RLHF) <span class="pts">5 + 25 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — Bradley-Terry preference model</span>
+    Given two trajectory segments, model the probability that σ<sup>1</sup> is preferred as a softmax over their <em>summed</em> predicted rewards:
+    <div class="eq"><var>P̂</var>(σ<sup>1</sup> ≻ σ<sup>2</sup>) = <span class="frac"><span>exp Σ<sub><var>t</var></sub> <var>r̂</var>(<var>o</var><sup>1</sup><sub><var>t</var></sub>,<var>a</var><sup>1</sup><sub><var>t</var></sub>)</span><span>exp Σ <var>r̂</var><sup>1</sup> + exp Σ <var>r̂</var><sup>2</sup></span></span> = σ(<var>R</var><sub>1</sub> − <var>R</var><sub>2</sub>)</div>
+    where <var>R</var><sub><var>i</var></sub> = Σ<sub><var>t</var></sub> <var>r̂</var>(<var>o</var><sup><var>i</var></sup><sub><var>t</var></sub>,<var>a</var><sup><var>i</var></sup><sub><var>t</var></sub>) and σ is the sigmoid. Fit <var>r̂</var> by cross-entropy against human labels — it's logistic regression on reward differences.</div>
+    <h4 class="part">Written (a) <span class="q">With <var>r̂</var>(<var>o</var>,<var>a</var>) = ϕ<sub><var>w</var></sub>(<var>o</var>,<var>a</var>), compute ∇<sub><var>w</var></sub> loss.</span></h4>
+    <div class="call proof"><span class="lab">Derivation</span><span class="qed">∎</span>
+    For one labeled pair, loss = −[ μ(1) log σ(<var>R</var><sub>1</sub>−<var>R</var><sub>2</sub>) + μ(2) log σ(<var>R</var><sub>2</sub>−<var>R</var><sub>1</sub>) ]. Use <span class="frac"><span><var>d</var></span><span><var>dx</var></span></span> log σ(<var>x</var>) = 1 − σ(<var>x</var>) and write <var>p</var> = <var>P̂</var>(σ<sup>1</sup>≻σ<sup>2</sup>) = σ(<var>R</var><sub>1</sub>−<var>R</var><sub>2</sub>). Since ∇<sub><var>w</var></sub>(<var>R</var><sub>2</sub>−<var>R</var><sub>1</sub>) = −∇<sub><var>w</var></sub>(<var>R</var><sub>1</sub>−<var>R</var><sub>2</sub>):
+    <div class="eq">∇<sub><var>w</var></sub> loss = −[ μ(1)(1−<var>p</var>) − μ(2)<var>p</var> ] ∇<sub><var>w</var></sub>(<var>R</var><sub>1</sub>−<var>R</var><sub>2</sub>)</div>
+    With μ(1)+μ(2)=1, the bracket simplifies: μ(1)(1−<var>p</var>) − μ(2)<var>p</var> = μ(1) − <var>p</var>. Therefore
+    <div class="eq">∇<sub><var>w</var></sub> loss = ( <var>p</var> − μ(1) ) Σ<sub><var>t</var></sub> [ ∇<sub><var>w</var></sub>ϕ<sub><var>w</var></sub>(<var>o</var><sup>1</sup><sub><var>t</var></sub>,<var>a</var><sup>1</sup><sub><var>t</var></sub>) − ∇<sub><var>w</var></sub>ϕ<sub><var>w</var></sub>(<var>o</var><sup>2</sup><sub><var>t</var></sub>,<var>a</var><sup>2</sup><sub><var>t</var></sub>) ]</div>
+    the classic logistic form <strong>(prediction − target) × (feature difference)</strong>, summed over the dataset.</div>
+    <h4 class="part">Coding (d) <span class="q">Implement the RewardModel.</span></h4>
+    <p class="file">A3_RLHF_DPO/run_rlhf.py · RewardModel</p>
+    <pre class="code">self.net = nn.Sequential(
+    nn.Linear(obs_dim + action_dim, hidden_dim),
+    nn.LeakyReLU(),
+    nn.Linear(hidden_dim, 1),
+    nn.Softmax()                       <span class="com">&lt;&lt;&lt; BUG (see below)</span>
+)
+self.optimizer = torch.optim.AdamW(self.net.parameters())
+
+<span class="kw">def</span> forward(self, obs, action):
+    ...
+    ratio  = self.net(torch.cat((obs, action), 1))
+    rewards = ratio * (self.r_max - self.r_min) + self.r_min   <span class="com"># scale [0,1] → [r_min, r_max]</span>
+    ...
+
+<span class="kw">def</span> update(self, batch):
+    obs1, obs2, act1, act2, label = batch
+    r1, r2 = self.forward(obs1, act1), self.forward(obs2, act2)
+    logits = torch.stack((r1.sum(1), r2.sum(1)), axis=1)        <span class="com"># [ΣR1, ΣR2] as BT logits</span>
+    target = torch.cat(((1-label).unsqueeze(1), label.unsqueeze(1)), axis=1)
+    loss = F.cross_entropy(logits, target)                      <span class="com"># = Bradley-Terry NLL</span>
+    ...</pre>
+    <div class="call bug"><span class="lab">Bug — <code class="inl">nn.Softmax()</code> on a single output always returns 1.0</span>
+    The output layer has width 1, and softmax over a <em>single</em> element is identically 1 (<var>e</var><sup><var>x</var></sup>/<var>e</var><sup><var>x</var></sup> = 1) for <em>every</em> input. So <code class="inl">ratio</code> ≡ 1, every predicted reward collapses to <code class="inl">r_max</code>, and the pre-softmax linear layer receives <em>zero gradient</em> — the reward model can never learn. The prompt asks for an activation that maps to [0,1]; the right choice for a scalar is <strong>Sigmoid</strong>. (Also, calling <code class="inl">nn.Softmax()</code> without <code class="inl">dim=</code> is deprecated.) Fix:
+    <pre class="code">self.net = nn.Sequential(
+    nn.Linear(obs_dim + action_dim, hidden_dim),
+    nn.LeakyReLU(),
+    nn.Linear(hidden_dim, 1),
+    nn.Sigmoid()                       <span class="com"># scalar squashed to (0,1)</span>
+)</pre>
+    With this one change the rest of the file is correct: <code class="inl">update</code> stacks the summed rewards as the two Bradley-Terry logits and applies <code class="inl">cross_entropy</code> with soft targets — which <em>is</em> the preference NLL, and it also handles the 0.5 "no preference" label gracefully.</div>
+    <h4 class="part">(f) <span class="q">Is the learned reward function identifiable?</span></h4>
+    <p><strong>No.</strong> The Bradley-Terry likelihood depends only on reward <em>differences</em> of trajectory sums, so any transformation that preserves those differences leaves the loss unchanged: adding a constant to <var>r̂</var> (it cancels in <var>R</var><sub>1</sub>−<var>R</var><sub>2</sub> over equal-length segments) and, more generally, positive rescaling (absorbed by the sigmoid's temperature) all give identical preferences. An entire family of reward functions is optimal, so only <em>relative/ordinal</em> reward is recovered, not an absolute scale — the classic RLHF identifiability caveat.</p>
+    <h4 class="part">(b, c, e, g) <span class="q">Data inspection, agreement estimate, correlation, rollout comparison.</span></h4>
+    <p>These are qualitative/experimental. The workflow: render trajectory pairs (<code class="inl">render.py --dataset ... --idx</code>), record whether you'd have labeled them the same (your personal agreement rate ≈ an upper bound on how good a reward learned from this noisy data can be); train PPO under the learned reward for 3 seeds and plot learned-vs-original returns (they should be positively correlated if the reward model captured the task); then render the final policy and compare its gait to the from-scratch A2 policies and the dataset demos. The repo's <code class="inl">results_rlhf/</code> holds these plots and videos.</p>
+
+    <!-- Q3 -->
+    <h3 class="prob">Q3 · Direct preference optimization (DPO) <span class="pts">25 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — DPO in one equation</span>
+    DPO skips the reward model entirely and optimizes the policy directly on preferences:
+    <div class="eq"><var>L</var><sub>DPO</sub> = −𝔼<sub>(<var>x</var>,<var>y<sub>w</sub></var>,<var>y<sub>l</sub></var>)</sub>[ log σ( β log <span class="frac"><span>π<sub>θ</sub>(<var>y<sub>w</sub></var>|<var>x</var>)</span><span>π<sub>ref</sub>(<var>y<sub>w</sub></var>|<var>x</var>)</span></span> − β log <span class="frac"><span>π<sub>θ</sub>(<var>y<sub>l</sub></var>|<var>x</var>)</span><span>π<sub>ref</sub>(<var>y<sub>l</sub></var>|<var>x</var>)</span></span> ) ]</div>
+    It raises the (reference-relative) log-prob of the preferred sequence <var>y<sub>w</sub></var> and lowers the rejected <var>y<sub>l</sub></var>, with β controlling how far π<sub>θ</sub> may drift from π<sub>ref</sub>. Here "sequences" are <var>T</var>-step action plans; the policy re-plans each step and executes only the first action (receding-horizon control).</div>
+    <h4 class="part">(a) <span class="q">ActionSequenceModel — predict a distribution over the next <var>T</var> actions.</span></h4>
+    <p class="file">A3_RLHF_DPO/run_dpo.py · ActionSequenceModel</p>
+    <pre class="code">output_dim = 2 * action_dim * segment_len   <span class="com"># mean AND log-std for every (t, action-dim)</span>
+self.net = nn.Sequential(nn.Linear(obs_dim, hidden_dim), nn.ReLU(),
+                         nn.Linear(hidden_dim, output_dim))
+
+<span class="kw">def</span> forward(self, obs):
+    first, second = torch.split(self.net(obs), self.segment_len*self.action_dim, dim=-1)
+    mean    = torch.tanh(first.reshape(B, seg_len, act_dim))          <span class="com"># actions ∈ (-1,1)</span>
+    log_std = torch.clamp(second.reshape(B, seg_len, act_dim), LOGSTD_MIN, LOGSTD_MAX)
+    <span class="kw">return</span> mean, torch.exp(log_std)
+
+<span class="kw">def</span> distribution(self, obs):
+    mean, std = self.forward(obs)
+    <span class="kw">return</span> D.Independent(D.Normal(mean, std), 2)   <span class="com"># treat (seg_len, act_dim) as one event</span>
+
+<span class="kw">def</span> act(self, obs):
+    a = self.distribution(np2torch(obs).unsqueeze(0)).sample()
+    <span class="kw">return</span> torch.clamp(a, -1, 1)[0][0].numpy()     <span class="com"># execute only the first action</span></pre>
+    <div class="call intuit"><span class="lab">Why <code class="inl">Independent(Normal, 2)</code></span>
+    Wrapping a batch of independent Normals and reinterpreting the last <strong>2</strong> dimensions (segment length × action dim) as a single event means <code class="inl">log_prob</code> automatically <em>sums</em> the per-coordinate log-densities — giving the joint log-probability of the whole <var>T</var>-step action plan in one call. That's the quantity SFT and DPO need. <code class="inl">tanh</code> keeps means in the actuator range; clamping log-std avoids exploding/vanishing variance. All correct.</div>
+    <h4 class="part">(b) <span class="q">SFT.update — pre-train by maximizing log-prob of preferred actions.</span></h4>
+    <pre class="code">log_prob = self.distribution(obs).log_prob(actions)
+loss = -torch.mean(log_prob)          <span class="com"># maximize likelihood ⇒ minimize −mean log π</span>
+loss.backward(); self.optimizer.step()</pre>
+    <p>Plain behavioral cloning / maximum-likelihood on the preferred (winning) action sequences. This produces the reference policy π<sub>ref</sub> that DPO anchors to. Correct.</p>
+    <h4 class="part">(c) <span class="q">DPO.update — minimize the DPO loss.</span></h4>
+    <pre class="code"><span class="kw">with</span> torch.no_grad():                         <span class="com"># π_ref is fixed — no gradients</span>
+    ref = ref_policy.distribution(obs)
+    ref_w, ref_l = ref.log_prob(actions_w), ref.log_prob(actions_l)
+cur = self.distribution(obs)
+log_w, log_l = cur.log_prob(actions_w), cur.log_prob(actions_l)
+m = self.beta*(log_w - ref_w) - self.beta*(log_l - ref_l)   <span class="com"># the sigmoid argument</span>
+loss = -torch.mean(F.logsigmoid(m))
+loss.backward(); self.optimizer.step()</pre>
+    <p>A faithful line-for-line implementation of <var>L</var><sub>DPO</sub>: the two β-weighted log-ratios, combined and passed through <code class="inl">logsigmoid</code> (numerically stable log σ). The reference terms are computed under <code class="inl">no_grad</code> for correctness and speed. Correct. (In <code class="inl">main</code>, note DPO is initialized from the SFT weights and uses a small lr = 1e-6 — DPO is sensitive and meant to nudge, not overhaul.)</p>
+    <h4 class="part">(d, e) <span class="q">Run DPO across seeds; compare to RLHF.</span></h4>
+    <p>Experimental. Expected discussion: DPO is simpler and cheaper (no reward model, no PPO loop — one supervised-style objective) and can be more stable here, but it's limited to the fixed offline preference data and can't explore beyond it; RLHF's learned reward lets PPO explore and potentially exceed the demonstrations, at the cost of a two-stage pipeline and reward-model error. The repo's <code class="inl">results_dpo/</code> holds the curves.</p>
+
+    <!-- Q4 -->
+    <h3 class="prob">Q4 · Best-arm identification in a bandit <span class="pts">25 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — the setup</span>
+    A multi-armed bandit is a one-state, horizon-1 MDP: pick an arm, see a reward in [0,1], no state transitions. Strategy: pull each of the |A| arms <var>n<sub>e</sub></var> times, return the arm with the highest empirical mean <var>r̂<sub>a</sub></var>. Question: how many pulls guarantee the returned arm is ε-optimal with probability ≥ 1−δ′? Hoeffding: Pr(|<var>r̂</var>−<var>r</var>| &gt; √(log(2/δ)/(2<var>n</var>))) &lt; δ.</div>
+    <h4 class="part">(a) <span class="q">Show Pr(∃<var>a</var>: |<var>r̂<sub>a</sub></var> − <var>r<sub>a</sub></var>| &gt; √(log(2/δ)/(2<var>n<sub>e</sub></var>))) &lt; |A|δ.</span></h4>
+    <div class="call proof"><span class="lab">Proof (union bound)</span><span class="qed">∎</span>
+    For a single fixed arm <var>a</var>, Hoeffding with <var>n<sub>e</sub></var> samples gives Pr(|<var>r̂<sub>a</sub></var>−<var>r<sub>a</sub></var>| &gt; √(log(2/δ)/(2<var>n<sub>e</sub></var>))) &lt; δ. The event "some arm deviates" is the union of these |A| events, so by the union (Boole) bound
+    <div class="eq">Pr(∃<var>a</var> : |<var>r̂<sub>a</sub></var>−<var>r<sub>a</sub></var>| &gt; √(log(2/δ)/(2<var>n<sub>e</sub></var>))) ≤ Σ<sub><var>a</var></sub> Pr(|<var>r̂<sub>a</sub></var>−<var>r<sub>a</sub></var>| &gt; …) &lt; |A|δ.</div>
+    (One could tighten by allocating failure probability δ/|A| per arm — the bound below does exactly that.)</div>
+    <h4 class="part">(b) <span class="q">How accurately must each arm be estimated, and how many total samples for an ε-optimal arm w.p. ≥ 1−δ′?</span></h4>
+    <div class="call proof"><span class="lab">Derivation</span><span class="qed">∎</span>
+    Estimate each arm to within β := ε/2. Define the "good event" <var>G</var>: every arm satisfies |<var>r̂<sub>a</sub></var>−<var>r<sub>a</sub></var>| ≤ ε/2. Under <var>G</var>, for the returned arm <var>a</var><sup>†</sup> = argmax <var>r̂<sub>a</sub></var> and the true best <var>a</var><sup>⋆</sup>:
+    <div class="eq"><var>r</var><sub><var>a</var><sup>†</sup></sub> ≥ <var>r̂</var><sub><var>a</var><sup>†</sup></sub> − <span class="frac"><span>ε</span><span>2</span></span> ≥ <var>r̂</var><sub><var>a</var><sup>⋆</sup></sub> − <span class="frac"><span>ε</span><span>2</span></span> ≥ ( <var>r</var><sub><var>a</var><sup>⋆</sup></sub> − <span class="frac"><span>ε</span><span>2</span></span> ) − <span class="frac"><span>ε</span><span>2</span></span> = <var>r</var><sub><var>a</var><sup>⋆</sup></sub> − ε</div>
+    (middle step: <var>a</var><sup>†</sup> maximizes the <em>empirical</em> mean). So under <var>G</var> the output is ε-optimal. By part (a), Pr(not <var>G</var>) &lt; |A|δ; set |A|δ = δ′, i.e. <strong>δ = δ′/|A|</strong>. Finally choose <var>n<sub>e</sub></var> so the Hoeffding width equals ε/2:
+    <div class="eq">√( <span class="frac"><span>log(2/δ)</span><span>2<var>n<sub>e</sub></var></span></span> ) = <span class="frac"><span>ε</span><span>2</span></span> &nbsp;⟹&nbsp; <var>n<sub>e</sub></var> = <span class="frac"><span>2</span><span>ε²</span></span> log( <span class="frac"><span>2|A|</span><span>δ′</span></span> )</div>
+    Total pulls across all arms:
+    <div class="eq"><var>N</var> = |A| · <var>n<sub>e</sub></var> = <span class="frac"><span>2|A|</span><span>ε²</span></span> log( <span class="frac"><span>2|A|</span><span>δ′</span></span> ).</div></div>
+    <div class="call intuit"><span class="lab">Reading the bound</span>
+    Sample cost scales as <strong>1/ε²</strong> (halving the tolerance quadruples the work — the price of statistical confidence), <strong>linearly in |A|</strong> (more arms to check), and only <strong>logarithmically in 1/δ′</strong> (buying more certainty is cheap). This is uniform-allocation pure exploration; adaptive algorithms (e.g. successive elimination) improve the constants by spending fewer pulls on obviously-bad arms.</div>
+
+    <!-- Q5 -->
+    <h3 class="prob">Q5 · Challenges of RLHF <span class="pts">5 pts</span></h3>
+    <h4 class="part">(a) <span class="q">Who are the human raters, and what ethical issues follow?</span></h4>
+    <p>Generic LLM preference labels are typically produced by <strong>low-paid crowdworkers or outsourced contractors</strong>, often concentrated in particular countries, English-speaking, and demographically unrepresentative of the global user base. Ethical issues: labor concerns (low pay, precarious work, exposure to disturbing content during safety labeling) and <strong>representational bias</strong> — the model inherits this narrow group's cultural, political, and stylistic preferences. Impact: outputs that encode a specific worldview as "the" preferred answer, systematically underserving or misrepresenting minority and non-Western perspectives, while appearing neutral.</p>
+    <h4 class="part">(b) <span class="q">Would RLHF be a good way to train better medical diagnoses?</span></h4>
+    <p>Generally <strong>no</strong>, at least not on lay preferences. RLHF optimizes for what raters <em>prefer</em>, which is not the same as what is <em>correct</em> — raters (even clinicians skimming) tend to favor confident, fluent, reassuring answers, so the model can learn <strong>sycophancy</strong> and confident wrongness rather than diagnostic accuracy. Medical truth requires verified outcomes and expert-validated labels, not pairwise "which sounds better" comparisons. RLHF could tune bedside tone or formatting, but the diagnostic content should be grounded in validated clinical data with expert oversight.</p>
+    <h4 class="part">(c) <span class="q">Describe one more limitation of RLHF.</span></h4>
+    <p><strong>Reward over-optimization (Goodhart's law).</strong> The learned reward model is only an approximation, accurate on the distribution of data it was trained on. As the policy is optimized hard against it, the policy drifts into regions where the reward model is a poor proxy — the measured reward keeps climbing while true quality plateaus or declines (verbose, formulaic, or subtly manipulative outputs that game the reward model). This is why a KL penalty to a reference policy (or DPO's β) is needed: to keep the policy near the region where the proxy is trustworthy. Other valid answers: preference feedback loses information vs. richer signals; single scalar reward can't represent conflicting human values; distribution shift between labeling and deployment.</p>
+  </section>
+
+  <!-- =========================== ISSUES SUMMARY =========================== -->
+  <section class="asg" id="issues">
+    <div class="asg-head"><span class="asg-num">⚑</span><h2>Code issues, ranked</h2></div>
+    <p class="asg-sub">Everything I'd change in the committed solutions, most-impactful first.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>#</th><th>File · location</th><th>Issue</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="n">1</td>
+          <td><code class="inl">run_rlhf.py</code> · RewardModel.__init__</td>
+          <td><strong>Real bug.</strong> <code class="inl">nn.Softmax()</code> on a width-1 output is always 1.0 → reward ≡ r_max, zero gradient, reward model never learns.</td>
+          <td>Replace with <code class="inl">nn.Sigmoid()</code>.</td>
+        </tr>
+        <tr>
+          <td class="n">2</td>
+          <td><code class="inl">policy.py</code> · GaussianPolicy / BasePolicy.act</td>
+          <td>Not a bug, but <code class="inl">std = torch.square(self.std())</code> is a misleading name (it's the variance), and <code class="inl">.numpy()</code> assumes CPU tensors.</td>
+          <td>Rename to <code class="inl">var</code>; use <code class="inl">.detach().cpu().numpy()</code> for GPU safety.</td>
+        </tr>
+        <tr>
+          <td class="n">3</td>
+          <td><code class="inl">vi_and_pi.py</code> · policy_iteration</td>
+          <td>Convergence tested via <code class="inl">np.linalg.norm(new_policy - policy) &gt; tol</code> on integer policies with a float tol — works but fragile/unclear.</td>
+          <td>Use <code class="inl">np.array_equal(new_policy, policy)</code> to detect a stable policy.</td>
+        </tr>
+        <tr>
+          <td class="n">4</td>
+          <td><code class="inl">run_rlhf.py</code> · RewardModel.net</td>
+          <td>Calling <code class="inl">nn.Softmax()</code> without <code class="inl">dim=</code> is deprecated (warns). Moot once fixed to Sigmoid.</td>
+          <td>Resolved by fix #1.</td>
+        </tr>
+      </tbody>
+    </table></div>
+    <p style="color:var(--ink-soft); font-size:.95rem">Everything else — the A2 policy/baseline/PPO code, the A1 value/policy iteration, and the DPO/SFT/ActionSequenceModel implementations — is correct and idiomatic. Only the RewardModel activation is a functional defect.</p>
+  </section>
+
+  <p class="foot">Built from the CS234 Spring-2024 handouts (Assignments/CS234_A1–A3.pdf) and the solution code in this repo. Written answers derived from scratch; RiverSwim thresholds computed by running the included solver. Verify proofs against the official solutions where available.</p>
+</main>
