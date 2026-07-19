@@ -1,110 +1,108 @@
+"""Baseline (value) network for variance reduction in policy-gradient training.
+
+Policy-gradient estimates are notoriously noisy. The trick this file implements is
+the *baseline*: instead of scaling each action's gradient by its raw return G_t, we
+subtract a state-dependent baseline V(s_t) and scale by the ADVANTAGE
+
+    A_t = G_t - V(s_t)          ("was this action better or worse than average
+                                 from this state?")
+
+Subtracting a state-only baseline leaves the gradient's expected value unchanged
+(so we still optimize the right thing) but dramatically lowers its variance, which
+makes training far more stable. Here V is a small neural net trained by regression
+to predict the observed returns.
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
-from network_utils import build_mlp, device, np2torch
+
+from network_utils import build_mlp, np2torch
 
 
 class BaselineNetwork(nn.Module):
-    """
-    Class for implementing Baseline network
+    """A learned state-value function V(s), used as the policy-gradient baseline.
+
+    It is an `nn.Module` wrapping an MLP that maps an observation to a single scalar
+    (the estimated value of that state), plus its own optimizer so it can be trained
+    independently of the policy.
     """
 
     def __init__(self, env, config):
-        """
-        TODO:
-        Create self.network using build_mlp, and create self.optimizer to
-        optimize its parameters.
-        You should find some values in the config, such as the number of layers,
-        the size of the layers, etc.
+        """Build the value network and its optimizer from the config.
+
+        Args:
+            env: The Gym environment (used only to read the observation dimension).
+            config: Hyperparameter bundle (layer count/size, learning rate, ...).
         """
         super().__init__()
         self.config = config
         self.env = env
         self.baseline = None
         self.lr = self.config.learning_rate
+
         observation_dim = self.env.observation_space.shape[0]
-
-        #######################################################
-        #########   YOUR CODE HERE - 2-8 lines.   #############
+        # Output size 1: the network predicts a single scalar value V(s) per state.
         self.network = build_mlp(observation_dim, 1, self.config.n_layers, self.config.layer_size)
-        self.optimizer = torch.optim.Adam(params=self.network.parameters(), lr=self.lr)
-        #######################################################
-        #########          END YOUR CODE.          ############
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.lr)
 
-    def forward(self, observations):
-        """
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        """Predict V(s) for a batch of observations.
+
+        The underlying network emits shape [batch, 1]; we flatten it to [batch] so it
+        lines up elementwise with the 1-D returns vector everywhere else.
+
+        Note: prefer calling the module (`self(obs)`) over `self.network(obs)` so this
+        flattening/shape guarantee is always applied.
+
         Args:
-            observations: torch.Tensor of shape [batch size, dim(observation space)]
+            observations: Tensor of shape [batch, observation_dim].
+
         Returns:
-            output: torch.Tensor of shape [batch size]
-
-        TODO:
-        Run the network forward and then squeeze the result so that it's
-        1-dimensional. Put the squeezed result in a variable called "output"
-        (which will be returned).
-
-        Note:
-        A nn.Module's forward method will be invoked if you
-        call it like a function, e.g. self(x) will call self.forward(x).
-        When implementing other methods, you should use this instead of
-        directly referencing the network (so that the shape is correct).
+            Tensor of shape [batch] with the predicted value of each state.
         """
-        #######################################################
-        #########   YOUR CODE HERE - 1 lines.     #############
         output = torch.flatten(self.network(observations))
-        #######################################################
-        #########          END YOUR CODE.          ############
         assert output.ndim == 1
         return output
 
-    def calculate_advantage(self, returns, observations):
-        """
+    def calculate_advantage(self, returns: np.ndarray, observations: np.ndarray) -> np.ndarray:
+        """Compute advantages A_t = G_t - V(s_t).
+
+        Subtracting the baseline's value estimate from each observed return yields the
+        advantage: how much better the taken trajectory did than the baseline expected.
+        This is the variance-reduced signal the policy update actually uses.
+
+        The value network is only *evaluated* here (not trained — that happens in
+        `update_baseline`), so we `.detach()` it from the autograd graph and move it to
+        CPU/numpy for the arithmetic against the numpy `returns`.
+
         Args:
-            returns: np.array of shape [batch size]
-                all discounted future returns for each step
-            observations: np.array of shape [batch size, dim(observation space)]
+            returns: Discounted returns G_t, shape [batch].
+            observations: Observations, shape [batch, observation_dim].
+
         Returns:
-            advantages: np.array of shape [batch size]
-
-        TODO:
-        Evaluate the baseline and use the result to compute the advantages.
-        Put the advantages in a variable called "advantages" (which will be
-        returned).
-
-        Note:
-        The arguments and return value are numpy arrays. The np2torch function
-        converts numpy arrays to torch tensors. You will have to convert the
-        network output back to numpy, which can be done via the numpy() method.
+            Advantages, shape [batch].
         """
         observations = np2torch(observations)
-        #######################################################
-        #########   YOUR CODE HERE - 1-4 lines.   ############
-        baseline = self(observations).detach().numpy()
+        baseline = self(observations).detach().cpu().numpy()
         advantages = returns - baseline
-        #######################################################
-        #########          END YOUR CODE.          ############
         return advantages
 
-    def update_baseline(self, returns, observations):
-        """
+    def update_baseline(self, returns: np.ndarray, observations: np.ndarray) -> None:
+        """Train the value network one step to better predict the returns.
+
+        This is a plain supervised regression: minimize the mean-squared error between
+        the predicted values V(s_t) and the observed returns G_t. Improving V here makes
+        it a tighter (lower-variance) baseline on the next iteration.
+
         Args:
-            returns: np.array of shape [batch size], containing all discounted
-                future returns for each step
-            observations: np.array of shape [batch size, dim(observation space)]
-
-        TODO:
-        Compute the loss (MSE), backpropagate, and step self.optimizer once.
-
-        You may find the following documentation useful:
-        https://pytorch.org/docs/stable/nn.functional.html
+            returns: Regression targets G_t, shape [batch].
+            observations: Inputs, shape [batch, observation_dim].
         """
         returns = np2torch(returns)
         observations = np2torch(observations)
-        #######################################################
-        #########   YOUR CODE HERE - 4-10 lines.  #############
+
         self.optimizer.zero_grad()
         loss = nn.functional.mse_loss(self(observations), returns)
         loss.backward()
         self.optimizer.step()
-        #######################################################
-        #########          END YOUR CODE.          ############

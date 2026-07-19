@@ -1,0 +1,16 @@
+Final reward (mean of last 20 iters), averaged over seeds [1, 2, 3]
+===================================================================
+env        method               mean +/- std  n_seeds
+------------------------------------------------------------
+cartpole   PG + baseline       198.5 +/-   0.9  3
+cartpole   PG no-baseline      191.6 +/-   5.2  3
+cartpole   PPO                 198.2 +/-   1.3  3
+------------------------------------------------------------
+pendulum   PG + baseline                  --  0  (no runs found)
+pendulum   PG no-baseline                 --  0  (no runs found)
+pendulum   PPO                            --  0  (no runs found)
+------------------------------------------------------------
+cheetah    PG + baseline     -1669.1 +/-   0.0  1
+cheetah    PG no-baseline                 --  0  (no runs found)
+cheetah    PPO                            --  0  (no runs found)
+------------------------------------------------------------

@@ -1,136 +1,209 @@
+"""Policy models: the part of the agent that turns an observation into an action.
+
+A "policy" answers one question: *given what I currently see, how should I act?*
+It does this probabilistically — it defines a probability distribution over actions
+and samples from it. Sampling (rather than always taking the single best action) is
+what lets the agent EXPLORE, which reinforcement learning depends on.
+
+Two concrete policies live here, sharing one interface:
+
+    CategoricalPolicy -- for DISCRETE actions (pick one of N choices, e.g. left/right)
+    GaussianPolicy    -- for CONTINUOUS actions (real-valued vectors, e.g. joint torques)
+
+Both are built on the same `BasePolicy` contract, so the training code can treat them
+interchangeably: it only ever calls `action_distribution(...)` and `act(...)`.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Optional, Tuple, Union
+
+import numpy as np
 import torch
-import torch.nn as nn
 import torch.distributions as ptd
+import torch.nn as nn
 
-from network_utils import np2torch, device
+from network_utils import np2torch
 
 
-class BasePolicy:
-    def action_distribution(self, observations):
-        """
+class BasePolicy(ABC):
+    """The shared contract every policy must fulfil.
+
+    This is an *abstract base class* (ABC): it defines the methods a policy must
+    provide but doesn't implement the model-specific one itself. Subclasses fill in
+    `action_distribution`; in return they inherit `act` for free. The training loop
+    programs against *this* interface, so it never needs to know whether it's driving
+    a discrete or a continuous policy.
+    """
+
+    @abstractmethod
+    def action_distribution(self, observations: torch.Tensor) -> ptd.Distribution:
+        """Return the action distribution p(action | observation) — MODEL-SPECIFIC.
+
+        This is the one piece each policy defines differently: it maps a batch of
+        observations to a torch `Distribution` object over actions (a `Categorical`
+        for discrete actions, a Gaussian for continuous ones). The returned
+        distribution is *batched* — one independent distribution per observation in
+        the batch — so downstream `.sample()` / `.log_prob(...)` act per-row.
+
+        Marked `@abstractmethod`: Python refuses to instantiate any subclass that
+        forgets to implement it, catching the mistake early instead of at call time.
+
         Args:
-            observations: torch.Tensor of shape [batch size, dim(observation space)]
+            observations: Tensor of shape [batch_size, observation_dim].
+
         Returns:
-            distribution: instance of a subclass of torch.distributions.Distribution
-
-        See https://pytorch.org/docs/stable/distributions.html#distribution
-
-        This is an abstract method and must be overridden by subclasses.
-        It will return an object representing the policy's conditional
-        distribution(s) given the observations. The distribution will have a
-        batch shape matching that of observations, to allow for a different
-        distribution for each observation in the batch.
+            A torch distribution with batch shape [batch_size].
         """
         raise NotImplementedError
 
-    def act(self, observations, return_log_prob = False):
-        """
+    def act(
+        self,
+        observations: np.ndarray,
+        return_log_prob: bool = False,
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+        """Choose actions for a batch of observations (the environment-facing entry point).
+
+        This is what the rollout loop calls to actually *play*. The pipeline is:
+
+            numpy observations  ->  tensor  ->  distribution  ->  sample  ->  numpy actions
+
+        Concretely it:
+          1. Converts the incoming numpy observations to a tensor on the right device.
+          2. Builds the action distribution via the subclass's `action_distribution`.
+          3. Samples one action per observation (this is the exploration step).
+          4. Optionally records each action's log-probability — PPO needs this later
+             as the "old" policy probability to compute its importance ratio.
+          5. Converts everything back to numpy for the environment / replay buffer.
+
+        Why `.detach().cpu().numpy()` on the way out:
+          - `.detach()` cuts the tensor out of the autograd graph. We are *acting*, not
+            training, so we don't want PyTorch tracking gradients through sampled actions
+            (that would leak memory and is meaningless here).
+          - `.cpu()` moves the tensor off the GPU, because numpy only lives on the CPU;
+            calling `.numpy()` on a GPU tensor would otherwise error.
+
         Args:
-            observations: np.array of shape [batch size, dim(observation space)]
+            observations: numpy array of shape [batch_size, observation_dim].
+            return_log_prob: If True, also return the log-probability of each action.
+
         Returns:
-            sampled_actions: np.array of shape [batch size, *shape of action]
-            log_probs: np.array of shape [batch size] (optionally, if return_log_prob)
-
-        TODO:
-        Call self.action_distribution to get the distribution over actions,
-        then sample from that distribution. Compute the log probability of
-        the sampled actions using self.action_distribution. You will have to
-        convert the actions and log probabilities to a numpy array, via numpy(). 
-
-        You may find the following documentation helpful:
-        https://pytorch.org/docs/stable/distributions.html
+            sampled_actions of shape [batch_size, *action_shape]; and, if
+            `return_log_prob` is True, a tuple (sampled_actions, log_probs) where
+            log_probs has shape [batch_size].
         """
         observations = np2torch(observations)
-        #######################################################
-        #########   YOUR CODE HERE - 1-4 lines.    ############
-        act_dist = self.action_distribution(observations)
-        sampled_actions = act_dist.sample()
-        log_probs = act_dist.log_prob(sampled_actions).detach().numpy()  # The reason why using detach() is that it can remove the gradient graph of tenosr and be tranfered to numpy easily
-        sampled_actions = sampled_actions.detach().numpy() 
-        #######################################################
-        #########          END YOUR CODE.          ############
+        distribution = self.action_distribution(observations)
+        sampled_actions = distribution.sample()
+        # Compute log-prob BEFORE converting the action to numpy — log_prob needs the tensor.
+        log_probs = distribution.log_prob(sampled_actions)
+
+        sampled_actions = sampled_actions.detach().cpu().numpy()
         if return_log_prob:
-            return sampled_actions, log_probs
+            return sampled_actions, log_probs.detach().cpu().numpy()
         return sampled_actions
 
 
 class CategoricalPolicy(BasePolicy, nn.Module):
-    def __init__(self, network):
+    """Policy for DISCRETE action spaces — choose one of N actions.
+
+    The network outputs one raw score ("logit") per possible action; a Categorical
+    distribution turns those scores into a probability for each action (via softmax)
+    and lets us sample one. Example: CartPole, where the two actions are push-left /
+    push-right.
+
+    It inherits from both `BasePolicy` (the policy contract) and `nn.Module` (so its
+    network's weights are tracked as trainable parameters by the optimizer).
+    """
+
+    def __init__(self, network: nn.Module):
+        """Store the network that maps observations -> per-action logits.
+
+        `nn.Module.__init__` must run first so PyTorch sets up its internal parameter
+        bookkeeping; assigning `self.network` then auto-registers that network's
+        weights as trainable parameters of this policy.
+        """
         nn.Module.__init__(self)
         self.network = network
 
-    def action_distribution(self, observations):
-        """
-        Args:
-            observations: torch.Tensor of shape [batch size, dim(observation space)]
-        Returns:
-            distribution: torch.distributions.Categorical where the logits
-                are computed by self.network
+    def action_distribution(self, observations: torch.Tensor) -> ptd.Categorical:
+        """Build the categorical distribution over discrete actions.
 
-        See https://pytorch.org/docs/stable/distributions.html#categorical
+        The network produces a logit per action; passing them as `logits=` lets
+        PyTorch apply the softmax internally (numerically safer than doing it by hand).
+
+        Args:
+            observations: Tensor of shape [batch_size, observation_dim].
+
+        Returns:
+            A `Categorical` with batch shape [batch_size] and N categories.
         """
-        #######################################################
-        #########   YOUR CODE HERE - 1-2 lines.    ############
         logits = self.network(observations)
-        distribution = ptd.Categorical(logits=logits)
-        #######################################################
-        #########          END YOUR CODE.          ############
-        return distribution
+        return ptd.Categorical(logits=logits)
 
 
 class GaussianPolicy(BasePolicy, nn.Module):
-    def __init__(self, network, action_dim):
-        """
-        After the basic initialization, you should create a nn.Parameter of
-        shape [dim(action space)] and assign it to self.log_std.
-        A reasonable initial value for log_std is 0 (corresponding to an
-        initial std of 1), but you are welcome to try different values.
+    """Policy for CONTINUOUS action spaces — output real-valued action vectors.
+
+    Instead of picking from a menu, this policy proposes a real vector (e.g. the
+    torque for each joint). It models actions as a *diagonal Gaussian*: the network
+    predicts the MEAN action for the current observation, and a separate learned
+    parameter controls the spread (how much random exploration to add around the mean).
+
+    "Diagonal" means each action dimension is independent (no cross-correlations) — a
+    simple, standard choice that makes the math cheap.
+    """
+
+    def __init__(self, network: nn.Module, action_dim: int):
+        """Store the mean-network and create the learnable spread parameter.
+
+        `self.log_std` is the *logarithm* of the standard deviation, one value per
+        action dimension. We learn log(std) rather than std directly so that:
+          - it can range over all real numbers (no need to constrain it positive), and
+          - exponentiating it (see `std`) always yields a valid positive std.
+        It is state-INDEPENDENT: the same exploration spread is used for every
+        observation, and it's a `nn.Parameter` so the optimizer trains it alongside the
+        network weights. Initializing to 0 means the initial std is exp(0) = 1.
+
+        Args:
+            network: Maps observations -> mean action, shape [batch, action_dim].
+            action_dim: Number of continuous action dimensions.
         """
         nn.Module.__init__(self)
         self.network = network
-        #######################################################
-        #########   YOUR CODE HERE - 1 line.       ############
         self.log_std = nn.Parameter(torch.zeros(action_dim))
-        #######################################################
-        #########          END YOUR CODE.          ############
 
-    def std(self):
-        """
+    def std(self) -> torch.Tensor:
+        """Return the per-dimension standard deviations (always positive).
+
+        Exponentiating `log_std` recovers the actual standard deviation and guarantees
+        it's positive, no matter what value training pushes `log_std` to.
+
         Returns:
-            std: torch.Tensor of shape [dim(action space)]
-
-        The return value contains the standard deviations for each dimension
-        of the policy's actions. It can be computed from self.log_std
+            Tensor of shape [action_dim] with the std of each action dimension.
         """
-        #######################################################
-        #########   YOUR CODE HERE - 1 line.       ############
-        std = torch.exp(self.log_std)
-        #######################################################
-        #########          END YOUR CODE.          ############
-        return std
+        return torch.exp(self.log_std)
 
-    def action_distribution(self, observations):
-        """
+    def action_distribution(self, observations: torch.Tensor) -> ptd.Distribution:
+        """Build the diagonal Gaussian action distribution.
+
+        The network gives the mean (`loc`); `std()` gives the spread. We assemble a
+        multi-dimensional Gaussian with independent dimensions using
+        `Independent(Normal(...), 1)`:
+          - `Normal(loc, scale)` makes one independent 1-D Gaussian per action element.
+          - `Independent(..., 1)` reinterprets the last dimension as a single joint
+            action, so `.log_prob(action)` returns ONE number per observation (the sum
+            of the per-dimension log-probs) instead of one per dimension.
+
+        This is equivalent to a `MultivariateNormal` with a diagonal covariance, but
+        much cheaper: it never builds or inverts a full covariance matrix. The std is
+        broadcast across the batch, giving every observation the same spread.
+
         Args:
-            observations: torch.Tensor of shape [batch size, dim(observation space)]
-        Returns:
-            distribution: an instance of a subclass of
-                torch.distributions.Distribution representing a diagonal
-                Gaussian distribution whose mean (loc) is computed by
-                self.network and standard deviation (scale) is self.std()
+            observations: Tensor of shape [batch_size, observation_dim].
 
-        Note: PyTorch doesn't have a diagonal Gaussian built in, but you can
-            fashion one out of
-            (a) torch.distributions.MultivariateNormal
-            or
-            (b) A combination of torch.distributions.Normal
-                             and torch.distributions.Independent
+        Returns:
+            A distribution with batch shape [batch_size] over action vectors of
+            length `action_dim`.
         """
-        #######################################################
-        #########   YOUR CODE HERE - 2-4 lines.    ############
         loc = self.network(observations)
-        std = torch.square(self.std())
-        distribution = ptd.MultivariateNormal(loc=loc, covariance_matrix=torch.diag(std))
-        #######################################################
-        #########          END YOUR CODE.          ############
-        return distribution
+        return ptd.Independent(ptd.Normal(loc=loc, scale=self.std()), 1)

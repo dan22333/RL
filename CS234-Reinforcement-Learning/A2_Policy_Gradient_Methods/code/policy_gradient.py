@@ -2,9 +2,11 @@ import numpy as np
 import torch
 import gym
 import os
-from general import get_logger, Progbar, export_plot
+import time
+import pybullet
+from general import get_logger, export_plot
 from baseline_network import BaselineNetwork
-from network_utils import build_mlp, device, np2torch
+from network_utils import build_mlp, np2torch
 from policy import CategoricalPolicy, GaussianPolicy
 
 
@@ -40,6 +42,11 @@ class PolicyGradient(object):
         self.env = env
         self.env.seed(self.seed)
 
+        # single persistent GUI env, created lazily on first --render replay
+        self.render_env = None
+        # offscreen env for --record-video (renders to file, needs no display)
+        self.record_env = None
+
         # discrete vs continuous action space
         self.discrete = isinstance(env.action_space, gym.spaces.Discrete)
         self.observation_dim = self.env.observation_space.shape[0]
@@ -54,34 +61,24 @@ class PolicyGradient(object):
         if config.use_baseline:
             self.baseline_network = BaselineNetwork(env, config)
 
-    def init_policy(self):
+    def init_policy(self) -> None:
+        """Build the policy network, its distribution head, and the optimizer.
+
+        The body network maps an observation to `action_dim` outputs — action logits
+        if the action space is discrete, or action means if it is continuous. We wrap
+        it in the matching distribution head (`CategoricalPolicy` / `GaussianPolicy`),
+        then hand ALL trainable parameters to Adam. For the Gaussian policy that
+        includes `log_std` (the learnable exploration spread) alongside the weights,
+        because `self.policy.parameters()` enumerates the whole module.
         """
-        Please do the following:
-        1. Create a network using build_mlp. It should map vectors of size
-           self.observation_dim to vectors of size self.action_dim, and use
-           the number of layers and layer size from self.config
-        2. If self.discrete = True (meaning that the actions are discrete, i.e.
-           from the set {0, 1, ..., N-1} where N is the number of actions),
-           instantiate a CategoricalPolicy.
-           If self.discrete = False (meaning that the actions are continuous,
-           i.e. elements of R^d where d is the dimension), instantiate a
-           GaussianPolicy. Either way, assign the policy to self.policy
-        3. Create an Adam optimizer for the policy, with learning rate self.lr
-           Note that the policy is an instance of (a subclass of) nn.Module, so
-           you can call the parameters() method to get its parameters.
-        """
-        #######################################################
-        #########   YOUR CODE HERE - 8-12 lines.   ############
-        self.network = build_mlp(self.observation_dim, self.action_dim, self.config.n_layers, self.config.layer_size)
+        self.network = build_mlp(
+            self.observation_dim, self.action_dim, self.config.n_layers, self.config.layer_size
+        )
         if self.discrete:
             self.policy = CategoricalPolicy(self.network)
         else:
             self.policy = GaussianPolicy(self.network, self.action_dim)
-
-        params = self.policy.parameters()
-        self.optimizer = torch.optim.Adam(params=params, lr=self.lr)
-        #######################################################
-        #########          END YOUR CODE.          ############
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr)
 
     def init_averages(self):
         """
@@ -137,24 +134,64 @@ class PolicyGradient(object):
         paths = []
         t = 0
 
+        render_live = getattr(self.config, "render_live", False)
+        render_fps = getattr(self.config, "render_fps", 0)
+
         while num_episodes or t < self.config.batch_size:
-            state = env.reset()
+            try:
+                state = env.reset()
+            except pybullet.error:
+                # live GUI window was closed -> fall back to headless and retry
+                env = self._rebuild_headless_env()
+                render_live = False
+                state = env.reset()
             states, actions, rewards = [], [], []
             episode_reward = 0
 
+            # --render-live: overlay the current iteration + episode number in the
+            # 3D window, refreshed each episode (clear the previous text first).
+            if render_live:
+                try:
+                    p = env.unwrapped._p
+                    p.removeAllUserDebugItems()
+                    p.addUserDebugText(
+                        "iteration {} | episode {}".format(
+                            getattr(self, "render_iteration", 0), episode + 1
+                        ),
+                        [0, 0, 1.4],
+                        textColorRGB=[1, 0, 0],
+                        textSize=1.6,
+                    )
+                except Exception:
+                    pass
+
+            aborted = False
             for step in range(self.config.max_ep_len):
                 states.append(state)
                 action = self.policy.act(states[-1][None])[0]
-                state, reward, done, info = env.step(action)
+                try:
+                    state, reward, done, info = env.step(action)
+                except pybullet.error:
+                    # live GUI window closed mid-episode: drop to headless,
+                    # discard this partial episode, keep training
+                    env = self._rebuild_headless_env()
+                    render_live = False
+                    aborted = True
+                    break
                 actions.append(action)
                 rewards.append(reward)
                 episode_reward += reward
                 t += 1
+                if render_live and render_fps:
+                    time.sleep(1.0 / render_fps)  # optional speed cap
                 if done or step == self.config.max_ep_len - 1:
                     episode_rewards.append(episode_reward)
                     break
                 if (not num_episodes) and t == self.config.batch_size:
                     break
+
+            if aborted:
+                continue  # skip the partial path; the while-loop carries on headless
 
             path = {
                 "observation": np.array(states),
@@ -189,19 +226,18 @@ class PolicyGradient(object):
 
         Note that here we are creating a list of returns for each path
 
-        TODO: compute and return G_t for each timestep. Use self.config.gamma.
+        Uses self.config.gamma as the discount factor.
         """
-
         all_returns = []
         for path in paths:
             rewards = path["reward"]
-            #######################################################
-            #########   YOUR CODE HERE - 5-10 lines.   ############
-            returns = rewards.copy()
-            for i in range(len(rewards)-2, -1, -1):   #  More efficient when using reverse calculation
-                returns[i] += self.config.gamma * returns[i+1]
-            #######################################################
-            #########          END YOUR CODE.          ############
+            # Discounted return G_t = r_t + γ r_{t+1} + γ^2 r_{t+2} + ...
+            # Computed right-to-left with the recurrence G_t = r_t + γ G_{t+1}
+            # (O(T) instead of O(T^2)). Cast to float first so the in-place
+            # γ-multiply can't be truncated by an integer reward dtype.
+            returns = rewards.astype(np.float64)
+            for i in range(len(returns) - 2, -1, -1):
+                returns[i] += self.config.gamma * returns[i + 1]
             all_returns.append(returns)
         returns = np.concatenate(all_returns)
 
@@ -219,14 +255,13 @@ class PolicyGradient(object):
         deviation of 1. Put the result in a variable called
         normalized_advantages (which will be returned).
 
-        Note:
+        Whitening the advantages (mean 0, std 1) keeps the gradient scale consistent
+        from batch to batch, which stabilizes learning. The small epsilon guards
+        against divide-by-zero when every advantage in the batch is identical.
+
         This function is called only if self.config.normalize_advantage is True.
         """
-        #######################################################
-        #########   YOUR CODE HERE - 1-2 lines.    ############
-        normalized_advantages = (advantages-np.mean(advantages))/(np.std(advantages))
-        #######################################################
-        #########          END YOUR CODE.          ############
+        normalized_advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-8)
         return normalized_advantages
 
     def calculate_advantage(self, returns, observations):
@@ -269,24 +304,25 @@ class PolicyGradient(object):
         See https://pytorch.org/docs/stable/distributions.html#distribution
 
         Note:
-        PyTorch optimizers will try to minimize the loss you compute, but you
-        want to maximize the policy's performance.
+        PyTorch optimizers MINIMIZE the loss, but we want to MAXIMIZE expected
+        return — hence the leading minus sign on the objective below.
         """
         observations = np2torch(observations)
         actions = np2torch(actions)
         advantages = np2torch(advantages)
-        #######################################################
-        #########   YOUR CODE HERE - 5-7 lines.    ############
+
         self.optimizer.zero_grad()
+
+        # log π(a_t|s_t) under the current policy, for the actions actually taken.
         dist = self.policy.action_distribution(observations)
         log_prob = dist.log_prob(actions)
-        
-        time_step = observations.shape[0]
-        loss = -torch.sum(log_prob*advantages)/time_step  # In order to maximize objective function
+
+        # Vanilla policy-gradient objective: maximize E[log π(a|s) * A]. Negate to
+        # turn it into a loss, and average over timesteps for a scale-stable gradient.
+        num_timesteps = observations.shape[0]
+        loss = -torch.sum(log_prob * advantages) / num_timesteps
         loss.backward()
         self.optimizer.step()
-        #######################################################
-        #########          END YOUR CODE.          ############
 
     def train(self):
         """
@@ -297,6 +333,11 @@ class PolicyGradient(object):
         """
         last_record = 0
 
+        # --render-live: open a single GUI window on the training env itself, so
+        # the rollouts we collect are drawn continuously (must be before reset).
+        if getattr(self.config, "render_live", False):
+            self.env.render(mode="human")
+
         self.init_averages()
         all_total_rewards = (
             []
@@ -305,6 +346,8 @@ class PolicyGradient(object):
 
         for t in range(self.config.num_batches):
 
+            # make the current iteration visible to sample_path's live overlay
+            self.render_iteration = t
             # collect a minibatch of samples
             paths, total_rewards = self.sample_path(self.env)
             all_total_rewards.extend(total_rewards)
@@ -336,6 +379,21 @@ class PolicyGradient(object):
             averaged_total_rewards.append(avg_reward)
             self.logger.info(msg)
 
+            # offscreen video snapshot every render_freq iterations (no display needed)
+            if getattr(self.config, "record_video", False) and (
+                t % getattr(self.config, "render_freq", 10) == 0
+            ):
+                self.record_video_episode(iteration=t)
+
+            # snapshot GUI replay every render_freq iterations (not in live mode,
+            # where the training rollouts are already being drawn continuously)
+            if (
+                getattr(self.config, "render", False)
+                and not getattr(self.config, "render_live", False)
+                and (t % getattr(self.config, "render_freq", 10) == 0)
+            ):
+                self.render_policy(iteration=t, avg_reward=avg_reward, num_episodes=1)
+
             if self.config.record and (last_record > self.config.record_freq):
                 self.logger.info("Recording...")
                 last_record = 0
@@ -350,13 +408,143 @@ class PolicyGradient(object):
             self.config.plot_output,
         )
 
+    def record_video_episode(self, iteration=None, max_frames=200):
+        """
+        Render one episode of the current policy OFFSCREEN and save it as an
+        animated GIF. Uses render(mode="rgb_array"), which needs no display /
+        GUI window, so it works headless and from a background shell. This is
+        the reliable way to watch the agent when a live GUI can't be shown.
+        """
+        from PIL import Image
+
+        if self.record_env is None:
+            self.record_env = gym.make(self.config.env_name)
+            self.record_env.seed(self.seed)
+        env = self.record_env
+        u = env.unwrapped
+
+        # Camera controls, matching the live view: yaw/pitch/distance from the CLI.
+        yaw = getattr(self.config, "render_yaw", 90.0)
+        pitch = getattr(self.config, "render_pitch", -5.0)
+        dist = getattr(self.config, "render_dist", 2.5)
+        W = getattr(u, "_render_width", 480) or 480
+        H = getattr(u, "_render_height", 360) or 360
+
+        def capture():
+            """One RGB frame from a yaw/pitch/dist camera that tracks the agent.
+
+            Uses our own view matrix (via getCameraImage) instead of the env's
+            built-in render camera, so the recorded angle matches --render-yaw
+            for BOTH envs (CartPole ignores _cam_* attributes). CPU/TinyRenderer
+            so it stays headless.
+            """
+            p = u._p
+            try:
+                target = list(u.robot.body_xyz)              # locomotion robots
+            except Exception:
+                try:
+                    target = list(p.getBasePositionAndOrientation(u.cartpole)[0])
+                except Exception:
+                    target = [0, 0, 0]
+            view = p.computeViewMatrixFromYawPitchRoll(target, dist, yaw, pitch, 0, 2)
+            proj = p.computeProjectionMatrixFOV(60.0, W / float(H), 0.1, 100.0)
+            img = p.getCameraImage(W, H, view, proj, renderer=p.ER_TINY_RENDERER)
+            return np.reshape(np.asarray(img[2], dtype=np.uint8), (H, W, 4))[:, :, :3]
+
+        state = env.reset()
+        frames = []
+        for step in range(self.config.max_ep_len):
+            try:
+                frame = capture()
+            except Exception:
+                frame = np.asarray(env.render(mode="rgb_array"), dtype=np.uint8)
+            frames.append(Image.fromarray(frame))
+            action = self.policy.act(state[None])[0]
+            state, reward, done, info = env.step(action)
+            if done or len(frames) >= max_frames:
+                break
+
+        tag = "iter{:03d}".format(iteration) if iteration is not None else "final"
+        out = os.path.join(self.config.output_path, "video_{}.gif".format(tag))
+        frames[0].save(
+            out, save_all=True, append_images=frames[1:], duration=50, loop=0
+        )
+        self.logger.info("Saved video: {}  ({} frames)".format(out, len(frames)))
+        return out
+
+    def _rebuild_headless_env(self):
+        """
+        Recover from a lost GUI physics server (e.g. the user closed the live
+        window mid-run): disable rendering and swap in a fresh headless env so
+        training continues uninterrupted. The visualization must never be able
+        to kill a run.
+        """
+        self.logger.info(
+            "GUI window closed / physics server lost -- continuing training WITHOUT rendering."
+        )
+        self.config.render_live = False
+        self.env = gym.make(self.config.env_name)
+        self.env.seed(self.seed)
+        return self.env
+
+    def render_policy(self, iteration=None, avg_reward=None, num_episodes=1, fps=60):
+        """
+        Play `num_episodes` episodes of the current policy in a live PyBullet
+        GUI window so you can watch the agent behave (and improve) as it trains.
+
+        Purely for visualization: it does NOT collect data or affect training.
+
+        Uses ONE persistent GUI window for the whole run (created on first call
+        and reused), so replays don't spawn a new window each time. For PyBullet
+        envs, render(mode="human") must be called before the first reset() to
+        open the window. Note: while training collects data between replays, the
+        window may briefly appear frozen since nothing is stepping it.
+        """
+        label = "iteration {}".format(iteration) if iteration is not None else "policy"
+        if avg_reward is not None:
+            label += "  |  avg train reward {:.1f}".format(avg_reward)
+        print("\n>>> [GUI] replaying {} ...".format(label), flush=True)
+
+        if self.render_env is None:
+            self.render_env = gym.make(self.config.env_name)
+            self.render_env.render(mode="human")  # open GUI window (once)
+        env = self.render_env
+
+        for _ in range(num_episodes):
+            state = env.reset()
+            # overlay the iteration/reward text inside the 3D window; clear the
+            # previous overlay first so labels don't stack up across replays
+            try:
+                p = env.unwrapped._p
+                p.removeAllUserDebugItems()
+                p.addUserDebugText(
+                    label, [0, 0, 1.4], textColorRGB=[1, 0, 0], textSize=1.6
+                )
+            except Exception:
+                pass
+            ep_reward = 0.0
+            for step in range(self.config.max_ep_len):
+                action = self.policy.act(state[None])[0]
+                state, reward, done, info = env.step(action)
+                ep_reward += reward
+                if fps:
+                    time.sleep(1.0 / fps)  # pace to real time so it's watchable
+                if done:
+                    break
+            print(
+                ">>> [GUI]   episode reward: {:.0f} ({} steps)".format(
+                    ep_reward, step + 1
+                ),
+                flush=True,
+            )
+
     def evaluate(self, env=None, num_episodes=1):
         """
         Evaluates the return for num_episodes episodes.
         Not used right now, all evaluation statistics are computed during training
         episodes.
         """
-        if env == None:
+        if env is None:
             env = self.env
         paths, rewards = self.sample_path(env, num_episodes)
         avg_reward = np.mean(rewards)
@@ -376,6 +564,25 @@ class PolicyGradient(object):
         )
         self.evaluate(env, 1)
 
+    def save_model(self):
+        """Persist trained weights so the agent can be reloaded and replayed later.
+
+        Saves the policy (and, if used, the baseline) state_dicts into
+        `config.model_output`. Reload with `play.py`, which rebuilds the same
+        architecture from the config and loads these files.
+        """
+        os.makedirs(self.config.model_output, exist_ok=True)
+        torch.save(
+            self.policy.state_dict(),
+            os.path.join(self.config.model_output, "policy.pt"),
+        )
+        if self.config.use_baseline:
+            torch.save(
+                self.baseline_network.state_dict(),
+                os.path.join(self.config.model_output, "baseline.pt"),
+            )
+        self.logger.info("Saved model weights to {}".format(self.config.model_output))
+
     def run(self):
         """
         Apply procedures of training for a PG.
@@ -385,6 +592,8 @@ class PolicyGradient(object):
             self.record()
         # model
         self.train()
+        # persist the trained weights for later replay
+        self.save_model()
         # record one game at the end
         if self.config.record:
             self.record()

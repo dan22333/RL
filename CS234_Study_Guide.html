@@ -354,66 +354,139 @@ new_policy = np.argmax(R + gamma * np.sum(T * V_policy, axis=2), axis=1)
     <div class="eq">∇<sub>θ</sub><var>J</var>(θ) = 𝔼<sub>π<sub>θ</sub></sub>[ ∇<sub>θ</sub> log π<sub>θ</sub>(<var>a</var>|<var>s</var>) · <var>Q</var><sup>π</sup>(<var>s</var>,<var>a</var>) ]</div>
     REINFORCE replaces <var>Q</var><sup>π</sup> with the sampled return <var>G</var><sub><var>t</var></sub> (unbiased, high variance). Subtracting a state-dependent <em>baseline</em> <var>b</var>(<var>s</var>) ≈ <var>V</var>(<var>s</var>) leaves the gradient unbiased but cuts variance; the result <var>Â</var><sub><var>t</var></sub> = <var>G</var><sub><var>t</var></sub> − <var>b</var>(<var>s</var><sub><var>t</var></sub>) is an advantage estimate.</div>
 
-    <p class="file">code/network_utils.py · build_mlp</p>
+    <!-- ===== SETUP ===== -->
+    <h4 class="part">The experimental setup <span class="q">— the parts the assignment fixes for you</span></h4>
+    <p>Three PyBullet continuous-physics environments, each trained from scratch with the same three algorithms (REINFORCE / REINFORCE+baseline / PPO) across seeds 1–3. The environment defines the <strong>state</strong>, <strong>action</strong>, and <strong>reward</strong>; you never touch those — they arrive fixed through <code class="inl">gym.make</code>.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Env (<code class="inl">--env-name</code>)</th><th>State <var>s</var> (observation)</th><th>Action <var>a</var></th><th>Policy head</th><th>Reward <var>r</var><sub><var>t</var></sub></th><th>Solved</th></tr></thead>
+      <tbody>
+      <tr><td><strong>cartpole</strong><br><span class="com">CartPoleBulletEnv-v1</span></td><td>4 reals: pole angle, pole angular vel, cart position, cart velocity</td><td class="n">Discrete(2)<br>push left / right</td><td>Categorical</td><td>+1 for every step the pole stays within the angle/position limits</td><td class="n">200</td></tr>
+      <tr><td><strong>pendulum</strong><br><span class="com">InvertedPendulumBulletEnv-v0</span></td><td>5 reals: cart pos &amp; vel, pole angle (encoded), pole angular vel</td><td class="n">Box(1) ∈ [−1,1]<br>continuous torque</td><td>Gaussian</td><td>≈ +1 per step the pole is kept upright</td><td class="n">1000</td></tr>
+      <tr><td><strong>cheetah</strong><br><span class="com">HalfCheetahBulletEnv-v0</span></td><td>26 reals: joint angles/velocities + body pose &amp; velocity</td><td class="n">Box(6) ∈ [−1,1]<br>6 joint torques</td><td>Gaussian</td><td>forward velocity + alive bonus − control cost − joint-limit penalty</td><td class="n">≥200</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Reading the reward column.</strong> CartPole and Pendulum are <em>survival</em> tasks — reward is a flat <var>+1</var> per step, so the return equals "how many steps you stayed alive" (max = episode length). No shaping, so the only way to score is to not fall. Cheetah is a <em>shaped locomotion</em> reward — it explicitly pays for forward speed and charges for wasted torque, which is why it needs a discount and a bigger network.</p>
+
+    <p>The training loop's knobs are also given, in <code class="inl">config.py</code> — you do not tune them:</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Hyperparameter</th><th>cartpole</th><th>pendulum</th><th>cheetah</th><th>What it controls</th></tr></thead>
+      <tbody>
+      <tr><td>epochs (<code class="inl">num_batches</code>)</td><td class="n">100</td><td class="n">100</td><td class="n">200</td><td>number of collect→update iterations</td></tr>
+      <tr><td>batch size (steps/update)</td><td class="n">2 000</td><td class="n">10 000</td><td class="n">10 000</td><td>env steps gathered before each gradient step</td></tr>
+      <tr><td>max episode length</td><td class="n">200</td><td class="n">1 000</td><td class="n">1 000</td><td>hard cap on a single rollout</td></tr>
+      <tr><td>learning rate</td><td class="n">3e-2</td><td class="n">3e-2</td><td class="n">3e-2</td><td>Adam step size (policy &amp; baseline)</td></tr>
+      <tr><td>discount γ</td><td class="n">1.0</td><td class="n">1.0</td><td class="n">0.9</td><td>how far ahead returns look</td></tr>
+      <tr><td>hidden layers × size</td><td class="n">1 × 64</td><td class="n">1 × 64</td><td class="n">2 × 64</td><td>MLP capacity for policy &amp; baseline</td></tr>
+      <tr><td>normalize advantage</td><td class="n">on</td><td class="n">on</td><td class="n">on</td><td>rescale <var>Â</var> to mean 0, std 1</td></tr>
+      <tr><td>PPO clip ε / inner updates</td><td class="n">0.2 / 5</td><td class="n">0.2 / 20</td><td class="n">0.1 / 10</td><td>trust-region size / batch reuse</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="call concept"><span class="lab">Given vs. what you implement</span>
+    <strong>Given (fixed scaffolding):</strong> the environments and their state/action/reward, every hyperparameter above, and the plumbing — <code class="inl">sample_path</code> (rollout collection), the <code class="inl">train</code> loop, <code class="inl">get_config</code>, logging and plotting. <strong>You implement</strong> only the marked <code class="inl">YOUR CODE HERE</code> blocks: the network builder, both policy heads, the return/advantage math, the policy update, the baseline network, and the PPO surrogate. <strong>Genuinely free choice:</strong> essentially just the initial value of <code class="inl">log_std</code> (the handout suggests 0 ⇒ σ=1, but invites you to experiment). Everything else has one correct answer.</div>
+
+    <div class="call intuit"><span class="lab">Why these fixed settings are sensible</span>
+    <ul>
+      <li><strong>Large batches (2k–10k steps).</strong> On-policy PG has a notoriously high-variance gradient; averaging over thousands of steps per update is the cheapest variance reducer and keeps each step's direction trustworthy.</li>
+      <li><strong>γ = 1 for CartPole/Pendulum, 0.9 for Cheetah.</strong> The survival tasks are short and episodic, so the undiscounted return (= lifetime) is a clean, well-scaled target. Cheetah runs for the full 1000 steps every episode; an undiscounted sum of per-step speed rewards would blow up and credit far-future steps to present actions, so γ&lt;1 both bounds the return and focuses credit locally.</li>
+      <li><strong>lr = 3e-2 is aggressive — and safe here only because advantages are normalized.</strong> Normalization pins the gradient scale to ~unit size, so one learning rate transfers across all three envs.</li>
+      <li><strong>Tiny nets (1–2 × 64).</strong> These observation spaces are 4–26 dimensional; a small MLP has ample capacity. Cheetah gets a second hidden layer for its richer 26-D state and harder control.</li>
+      <li><strong>PPO reuse (5–20 inner updates, ε clip).</strong> Squeezes multiple steps from each expensive batch; the clip keeps those extra steps from drifting too far off the data-collecting policy.</li>
+    </ul></div>
+
+    <!-- ===== ALGORITHM ===== -->
+    <h4 class="part">The full algorithm <span class="q">— REINFORCE with a baseline, one iteration</span></h4>
+    <p>Everything below repeats for each of the <code class="inl">num_batches</code> epochs. Each line names the function that implements it.</p>
+    <ol>
+      <li><strong>Collect a batch.</strong> Run the current policy π<sub>θ</sub> in the env, sampling <var>a</var>∼π<sub>θ</sub>(·|<var>s</var>), until ≈<code class="inl">batch_size</code> steps are stored as (<var>s</var>,<var>a</var>,<var>r</var>) — that's several episodes. &nbsp;<span class="com">→ sample_path / policy.act</span></li>
+      <li><strong>Compute returns.</strong> For every timestep, <var>G</var><sub><var>t</var></sub> = <var>r</var><sub><var>t</var></sub> + γ<var>G</var><sub><var>t</var>+1</sub> (reverse pass). &nbsp;<span class="com">→ get_returns</span></li>
+      <li><strong>Form the advantage.</strong> With a baseline, <var>Â</var><sub><var>t</var></sub> = <var>G</var><sub><var>t</var></sub> − <var>V</var>(<var>s</var><sub><var>t</var></sub>); without one, <var>Â</var><sub><var>t</var></sub> = <var>G</var><sub><var>t</var></sub>. &nbsp;<span class="com">→ calculate_advantage</span></li>
+      <li><strong>Normalize the advantage.</strong> Rescale the batch of <var>Â</var> to mean 0, std 1. &nbsp;<span class="com">→ normalize_advantage</span> &nbsp;<em>(this is the normalization step — it runs here, once per iteration, right before the policy update.)</em></li>
+      <li><strong>Fit the baseline.</strong> Regress <var>V</var>(<var>s</var><sub><var>t</var></sub>) toward <var>G</var><sub><var>t</var></sub> by one MSE step, so next iteration's baseline is sharper. &nbsp;<span class="com">→ update_baseline</span></li>
+      <li><strong>Update the policy.</strong> One ascent step on 𝔼[ log π<sub>θ</sub>(<var>a</var>|<var>s</var>) · <var>Â</var> ], i.e. minimize −mean(log π · <var>Â</var>). &nbsp;<span class="com">→ update_policy</span></li>
+      <li><strong>Log &amp; repeat.</strong> Record the batch's average return and loop.</li>
+    </ol>
+    <p><strong>The PPO variant</strong> changes only steps 1 and 6: at collection it caches each action's log-prob under the data-gathering policy (π<sub>old</sub>), then in step 6 it runs <code class="inl">update_freq</code> inner steps on the <em>clipped</em> ratio surrogate instead of a single vanilla step — reusing the same batch several times.</p>
+
+    <!-- ===== CODE ===== -->
+    <h4 class="part">The code you wrote <span class="q">— every YOUR CODE block, in algorithm order</span></h4>
+
+    <p class="file">code/network_utils.py · build_mlp <span class="com">— the shared MLP trunk</span></p>
     <pre class="code">layers = [nn.Linear(input_size, size), nn.ReLU()]
 <span class="kw">for</span> _ <span class="kw">in</span> range(n_layers - 1):
     layers += [nn.Linear(size, size), nn.ReLU()]
 layers.append(nn.Linear(size, output_size))     <span class="com"># final layer linear, no ReLU</span>
-model = nn.Sequential(*layers)</pre>
-    <p>Builds <code class="inl">[Linear→ReLU]×n_layers → Linear</code>. Matches the spec exactly: <var>n_layers</var> hidden ReLU layers, a linear head. This is the shared trunk for both policies and the baseline.</p>
+<span class="kw">return</span> nn.Sequential(*layers)</pre>
+    <p>Builds <code class="inl">[Linear→ReLU]×n_layers → Linear</code>. Matches the spec exactly: <var>n_layers</var> hidden ReLU layers, a linear head. The <em>linear</em> output is essential — it must be free to represent action logits (discrete), action means (continuous), or a scalar value (baseline), all of which can be any real number. This one function is the shared trunk for both policy heads and the baseline.</p>
 
-    <p class="file">code/policy.py</p>
-    <pre class="code"><span class="com"># BasePolicy.act — sample an action and (optionally) its log-prob</span>
-act_dist = self.action_distribution(observations)
-sampled_actions = act_dist.sample()
-log_probs = act_dist.log_prob(sampled_actions).detach().numpy()
-sampled_actions = sampled_actions.detach().numpy()
+    <p class="file">code/policy_gradient.py · init_policy <span class="com">— wire trunk → policy head → optimizer</span></p>
+    <pre class="code">self.network   = build_mlp(self.observation_dim, self.action_dim, config.n_layers, config.layer_size)
+self.policy    = CategoricalPolicy(self.network) <span class="kw">if</span> self.discrete \
+                 <span class="kw">else</span> GaussianPolicy(self.network, self.action_dim)
+self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=self.lr)</pre>
+    <p>Picks the discrete vs. continuous head automatically from the env's action space. Handing <code class="inl">self.policy.parameters()</code> to Adam matters for the Gaussian: it sweeps in <code class="inl">log_std</code> (a registered <code class="inl">nn.Parameter</code>) alongside the network weights, so the spread of actions is learned too.</p>
 
-<span class="com"># CategoricalPolicy — discrete actions: net outputs logits</span>
+    <p class="file">code/policy.py <span class="com">— sampling actions and the two policy heads (steps 1 &amp; 6)</span></p>
+    <pre class="code"><span class="com"># BasePolicy.act — sample an action and its log-prob (used during rollouts)</span>
+act_dist = self.action_distribution(np2torch(observations))
+sampled  = act_dist.sample()
+log_probs       = act_dist.log_prob(sampled).detach().cpu().numpy()   <span class="com"># cached as π_old for PPO</span>
+sampled_actions = sampled.detach().cpu().numpy()                       <span class="com"># .cpu() ⇒ GPU-safe</span>
+
+<span class="com"># CategoricalPolicy — discrete actions: the net's outputs ARE the logits</span>
 distribution = ptd.Categorical(logits=self.network(observations))
 
 <span class="com"># GaussianPolicy — continuous actions</span>
 self.log_std = nn.Parameter(torch.zeros(action_dim))   <span class="com"># learned, state-independent</span>
 <span class="kw">def</span> std(self):     <span class="kw">return</span> torch.exp(self.log_std)
 <span class="kw">def</span> action_distribution(self, obs):
-    loc = self.network(obs)
-    std = torch.square(self.std())                     <span class="com"># σ² = variance</span>
-    <span class="kw">return</span> ptd.MultivariateNormal(loc, covariance_matrix=torch.diag(std))</pre>
+    loc      = self.network(obs)                       <span class="com"># mean action</span>
+    variance = torch.square(self.std())                <span class="com"># covariance diagonal wants σ² = variance</span>
+    <span class="kw">return</span> ptd.MultivariateNormal(loc, covariance_matrix=torch.diag(variance))</pre>
+    <p><code class="inl">act</code> is what <code class="inl">sample_path</code> calls every step to drive the env; <code class="inl">.detach()</code> drops the autograd graph (we're acting, not training) and <code class="inl">.cpu()</code> makes <code class="inl">.numpy()</code> safe even on a GPU. A <strong>Categorical</strong> takes the network output directly as logits; a <strong>Gaussian</strong> uses the network as the mean and a separate learned spread.</p>
     <div class="call concept"><span class="lab">Concept refresher — why log_std, not std</span>
     Standard deviation must be positive. Parameterizing <code class="inl">log_std</code> freely in ℝ and exponentiating guarantees σ = <var>e</var><sup>log_std</sup> &gt; 0 with no constraints on the optimizer. Keeping it a <em>state-independent</em> <code class="inl">nn.Parameter</code> (rather than a network output) is the common, stable choice for continuous control.</div>
-    <div class="call intuit"><span class="lab">A confusing-but-correct line worth pausing on</span>
-    <code class="inl">std = torch.square(self.std())</code> reads like a bug — it's squaring the standard deviation. But <code class="inl">MultivariateNormal</code>'s <code class="inl">covariance_matrix</code> argument wants <em>variances</em> on the diagonal, and variance = σ². So the math is right; only the variable name is misleading. Rename it <code class="inl">var</code> for clarity. Also, <code class="inl">.numpy()</code> in <code class="inl">act</code> assumes CPU tensors — on a GPU it would throw; use <code class="inl">.detach().cpu().numpy()</code> for portability.</div>
+    <div class="call intuit"><span class="lab">The one line that looks like a bug but isn't</span>
+    <code class="inl">variance = torch.square(self.std())</code> reads like it's squaring the standard deviation by mistake. It isn't: <code class="inl">MultivariateNormal</code>'s <code class="inl">covariance_matrix</code> wants <em>variances</em> on its diagonal, and variance = σ². The square is exactly right — the earlier version of this code hid it behind a variable literally named <code class="inl">std</code>, which is why it's renamed <code class="inl">variance</code> here.</div>
 
-    <p class="file">code/policy_gradient.py</p>
-    <pre class="code"><span class="com"># get_returns — O(T) reverse accumulation of discounted returns</span>
-returns = rewards.copy()
-<span class="kw">for</span> i <span class="kw">in</span> range(len(rewards) - 2, -1, -1):
-    returns[i] += self.config.gamma * returns[i + 1]   <span class="com"># G_t = r_t + γ G_{t+1}</span>
+    <p class="file">code/policy_gradient.py · get_returns <span class="com">— step 2</span></p>
+    <pre class="code">returns = rewards.astype(np.float64)                    <span class="com"># float first so integer rewards don't truncate</span>
+<span class="kw">for</span> i <span class="kw">in</span> range(len(returns) - 2, -1, -1):
+    returns[i] += self.config.gamma * returns[i + 1]    <span class="com"># G_t = r_t + γ G_{t+1}, O(T) reverse pass</span></pre>
+    <p>One right-to-left sweep reuses the already-computed suffix, so all <var>T</var> returns cost O(<var>T</var>) — precisely the answer to writeup (a) below.</p>
 
-<span class="com"># normalize_advantage — zero mean, unit std</span>
-normalized = (advantages - np.mean(advantages)) / np.std(advantages)
+    <p class="file">code/policy_gradient.py · calculate_advantage → normalize_advantage <span class="com">— steps 3 &amp; 4</span></p>
+    <pre class="code"><span class="com"># calculate_advantage: subtract baseline (step 3), then normalize (step 4)</span>
+advantages = self.baseline_network.calculate_advantage(returns, obs) <span class="kw">if</span> use_baseline <span class="kw">else</span> returns
+<span class="kw">if</span> self.config.normalize_advantage:
+    advantages = self.normalize_advantage(advantages)          <span class="com"># ← THE normalization step</span>
 
-<span class="com"># update_policy — one gradient ascent step on E[log π · Â]</span>
-self.optimizer.zero_grad()
-dist = self.policy.action_distribution(observations)
-log_prob = dist.log_prob(actions)
-loss = -torch.sum(log_prob * advantages) / observations.shape[0]   <span class="com"># minus ⇒ ascent</span>
+<span class="com"># normalize_advantage — rescale the whole batch to mean 0, std 1</span>
+normalized_advantages = (advantages - np.mean(advantages)) / np.std(advantages)</pre>
+    <div class="call intuit"><span class="lab">This is the advantage normalization — where &amp; why</span>
+    It lives in <code class="inl">normalize_advantage</code> and fires once per iteration from <code class="inl">calculate_advantage</code>, immediately <em>after</em> the baseline is subtracted and immediately <em>before</em> <code class="inl">update_policy</code>. <strong>Why:</strong> the advantage is the per-action weight in the policy gradient, so its raw scale <em>is</em> the effective step size. Subtracting the mean is an unbiased variance reducer (a batch-level baseline: "how much better than average was this action?"); dividing by the std pins the gradient to unit scale so one learning rate works across all three envs and stays stable as returns grow. (Purely defensive nit: add <code class="inl">+ 1e-8</code> to the denominator to avoid a divide-by-zero if every advantage in a batch were identical — never happens here.)</div>
+
+    <p class="file">code/policy_gradient.py · update_policy <span class="com">— step 6 (REINFORCE)</span></p>
+    <pre class="code">self.optimizer.zero_grad()
+dist     = self.policy.action_distribution(np2torch(observations))
+log_prob = dist.log_prob(np2torch(actions))
+loss     = -torch.sum(log_prob * advantages) / observations.shape[0]   <span class="com"># −mean(log π · Â) ⇒ ascent</span>
 loss.backward(); self.optimizer.step()</pre>
-    <p>The <code class="inl">get_returns</code> reverse pass is precisely the answer to writeup (a) below. <code class="inl">update_policy</code> negates the objective because PyTorch minimizes — minimizing −<var>J</var> maximizes <var>J</var>. Dividing by the batch size makes the step size insensitive to how many transitions landed in the batch.</p>
+    <p>This is the policy gradient itself: nudging θ to raise the log-probability of actions with positive advantage and lower it for negative ones. It <em>negates</em> the objective because PyTorch minimizes — minimizing −<var>J</var> maximizes <var>J</var> — and divides by the batch size so the step is insensitive to how many transitions landed in the batch. Note <code class="inl">advantages</code> enters as a constant here (it was detached back in the baseline), so gradients flow only through <code class="inl">log_prob</code>.</p>
 
-    <p class="file">code/baseline_network.py</p>
-    <pre class="code">self.network = build_mlp(obs_dim, 1, n_layers, layer_size)   <span class="com"># scalar V(s)</span>
+    <p class="file">code/baseline_network.py <span class="com">— the value baseline (steps 3 &amp; 5)</span></p>
+    <pre class="code">self.network = build_mlp(obs_dim, 1, n_layers, layer_size)   <span class="com"># outputs a scalar V(s)</span>
 <span class="kw">def</span> forward(self, obs):  <span class="kw">return</span> torch.flatten(self.network(obs))   <span class="com"># [B,1] → [B]</span>
 
-<span class="kw">def</span> calculate_advantage(self, returns, obs):
-    baseline = self(np2torch(obs)).detach().numpy()
-    <span class="kw">return</span> returns - baseline                                 <span class="com"># Â = G − b(s)</span>
+<span class="kw">def</span> calculate_advantage(self, returns, obs):                   <span class="com"># step 3</span>
+    baseline = self(np2torch(obs)).detach().cpu().numpy()
+    <span class="kw">return</span> returns - baseline                                 <span class="com"># Â = G − V(s)</span>
 
-<span class="kw">def</span> update_baseline(self, returns, obs):
+<span class="kw">def</span> update_baseline(self, returns, obs):                       <span class="com"># step 5</span>
     self.optimizer.zero_grad()
-    loss = F.mse_loss(self(np2torch(obs)), np2torch(returns))  <span class="com"># fit b(s) → G_t</span>
+    loss = F.mse_loss(self(np2torch(obs)), np2torch(returns))  <span class="com"># fit V(s) → G_t</span>
     loss.backward(); self.optimizer.step()</pre>
-    <p>The baseline is a second network trained by regression to predict the return from each state. Crucially, <code class="inl">calculate_advantage</code> calls <code class="inl">.detach()</code> — the advantage must be treated as a <em>constant</em> when differentiating the policy loss, otherwise gradients would leak from the policy objective into the baseline. Correct.</p>
+    <p>The baseline is a second network trained by regression to predict the return from each state — a lower-variance stand-in for the true <var>V</var><sup>π</sup>. Crucially, <code class="inl">calculate_advantage</code> calls <code class="inl">.detach()</code>: the advantage must be a <em>constant</em> when differentiating the policy loss, or gradients from the policy objective would leak into the value network. The two networks are trained by two separate optimizers (<code class="inl">update_baseline</code> uses MSE; <code class="inl">update_policy</code> uses the policy gradient) — they only communicate through the (detached) advantage number.</p>
 
     <p class="file">code/ppo.py · update_policy</p>
     <pre class="code">dist = self.policy.action_distribution(observations)
@@ -449,6 +522,14 @@ loss.backward(); self.optimizer.step()</pre>
 
     <!-- Q3 -->
     <h3 class="prob">Q3 · Distributions induced by a policy <span class="pts">13 pts</span></h3>
+    <div class="call concept"><span class="lab">Concept refresher — three distributions, and why they matter</span>
+    A policy π plus the environment dynamics induce a whole cascade of distributions. This question builds them bottom-up:
+    <ul>
+      <li><strong>ρ<sup>π</sup>(τ)</strong> — probability of an entire <em>trajectory</em> (part a).</li>
+      <li><strong><var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>)</strong> — probability of being in state <var>s</var> at a specific time <var>t</var>, obtained by marginalizing ρ<sup>π</sup> (part b).</li>
+      <li><strong><var>d</var><sup>π</sup>(<var>s</var>) = (1−γ)Σ<sub><var>t</var></sub> γ<sup><var>t</var></sup> <var>p</var><sup>π</sup>(<var>s</var><sub><var>t</var></sub>=<var>s</var>)</strong> — the <em>discounted stationary state distribution</em>: how often you visit <var>s</var>, with later visits down-weighted by γ<sup><var>t</var></sup>. The (1−γ) makes it a proper distribution (parts c, d).</li>
+    </ul>
+    The payoff is parts (c)/(d): they show a discounted sum over time collapses into a single expectation over <var>d</var><sup>π</sup>, which is exactly what lets the <em>policy gradient theorem</em> and the <em>performance-difference lemma</em> (the backbone of TRPO/PPO in Q2) be written as clean expectations. This is the theory under the code you wrote.</div>
     <h4 class="part">(a) <span class="q">Probability ρ<sup>π</sup>(τ) of a trajectory τ = (<var>s</var><sub>0</sub>,<var>a</var><sub>0</sub>,<var>s</var><sub>1</sub>,…).</span></h4>
     <div class="eq">ρ<sup>π</sup>(τ) = ∏<sub><var>t</var>=0</sub><sup>∞</sup> π(<var>a</var><sub><var>t</var></sub>|<var>s</var><sub><var>t</var></sub>) · <var>P</var>(<var>s</var><sub><var>t</var>+1</sub>|<var>s</var><sub><var>t</var></sub>,<var>a</var><sub><var>t</var></sub>)</div>
     <p>The starting state <var>s</var><sub>0</sub> is fixed, so it contributes a factor of 1. Each step multiplies the probability of the chosen action (from the policy) by the probability of the resulting transition (from the dynamics).</p>
